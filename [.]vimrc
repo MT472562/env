@@ -1,0 +1,78 @@
+" ==========================================
+" 1. プラグイン管理 (vim-plug)
+" ==========================================
+call plug#begin('~/.vim/plugged')
+
+" 外観
+Plug 'ghifarit53/tokyonight-vim'
+Plug 'itchyny/lightline.vim'
+Plug 'ryanoasis/vim-devicons' " アイコン表示用（任意）
+
+" 開発効率
+Plug 'preservim/nerdtree'
+Plug 'neoclide/coc.nvim', {'branch': 'release'}
+Plug 'tpope/vim-commentary'
+
+call plug#end()
+
+" ==========================================
+" 2. 基本設定 (動作・インデント)
+" ==========================================
+syntax on
+set background=dark
+set termguicolors     " 真のカラー（24bit）を有効化
+
+set number            " 行番号を表示
+set relativenumber    " 相対行番号
+set cursorline        " カーソル行をハイライト
+set laststatus=2      " ステータスラインを常時表示
+
+set tabstop=4         " Tab幅を4に
+set shiftwidth=4
+set expandtab         " Tabをスペースに変換
+set smartindent       " 自動インデント
+
+set clipboard=unnamedplus " クリップボード共有
+set updatetime=300      " 反応速度向上
+
+set ignorecase    " 検索で大文字小文字を無視
+set smartcase     " 大文字を含む場合は区別
+set incsearch     " インクリメンタル検索
+set hlsearch      " 検索結果をハイライト
+
+" Escで検索ハイライトを消す
+nnoremap <Esc> :nohlsearch<CR>
+
+" ==========================================
+" 3. プラグイン・外観設定
+" ==========================================
+" --- 先に Lightline の設定を読み込む ---
+let g:lightline = {
+      \ 'colorscheme': 'tokyonight',
+      \ 'active': {
+      \   'left': [ [ 'mode', 'paste' ],
+      \             [ 'readonly', 'filename', 'modified' ] ]
+      \ }
+      \ }
+
+" --- 次に Tokyo Night の設定と適用を行う ---
+let g:tokyonight_style = 'night'
+let g:tokyonight_enable_italic = 1
+
+colorscheme tokyonight
+
+" 背景透過設定 (colorscheme適用直後に記述)
+highlight Normal guibg=NONE ctermbg=NONE
+highlight NonText guibg=NONE ctermbg=NONE
+highlight LineNr guibg=NONE ctermbg=NONE
+highlight SignColumn guibg=NONE ctermbg=NONE
+highlight EndOfBuffer guibg=NONE ctermbg=NONE
+
+" ==========================================
+" 4. キーバインド
+" ==========================================
+" 挿入モードから jj で脱出
+inoremap jj <Esc>
+
+" Ctrl + n でファイルツリー (NERDTree) を開閉
+nnoremap <C-n> :NERDTreeToggle<CR>
