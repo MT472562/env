@@ -29,34 +29,4 @@ curl -sS https://starship.rs/install.sh | sh
 sudo apt update
 sudo apt install -y eza
 
-言語系インストール
-# asdf 本体のダウンロード
-git clone https://github.com/asdf-vm/asdf.git ~/.asdf --branch v0.14.0
-
-# .bashrc に設定を追記
-echo '. "$HOME/.asdf/asdf.sh"' >> ~/.bashrc
-echo '. "$HOME/.asdf/completions/asdf.bash"' >> ~/.bashrc
-source ~/.bashrc
-
-# プラグインの追加
-asdf plugin add python
-asdf plugin add java
-asdf plugin add nodejs
-
-# 最新版のインストール（少し時間がかかります）
-asdf install python latest
-asdf install java openjdk-21
-asdf install nodejs latest
-
-# システム全体で使うバージョンに設定
-asdf global python latest
-asdf global java openjdk-21
-asdf global nodejs latest
-# 公式のインストーラーを実行
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source $HOME/.cargo/env
-
-# コンパイラとビルドツール
-sudo apt update
-sudo apt install -y build-essential clangd
 
