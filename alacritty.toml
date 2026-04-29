@@ -10,8 +10,8 @@ x = 15
 y = 15
 
 [window.dimensions]
-columns = 130
-lines = 30
+columns = 170
+lines = 45
 
 [colors.primary]
 background = '#0e101a'
