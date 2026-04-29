@@ -1,52 +1,85 @@
 " ==========================================
-" 1. プラグイン管理 (vim-plug)
+" Vim Configuration File
+" ==========================================
+
+" ==========================================
+" 1. Vim-Plug 自動インストール
+" ==========================================
+let data_dir = has('nvim') ? stdpath('data') . '/site' : '~/.vim'
+if empty(glob(data_dir . '/autoload/plug.vim'))
+  silent execute '!curl -fLo '.data_dir.'/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim'
+  autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+endif
+
+
+" ==========================================
+" 2. プラグイン管理
 " ==========================================
 call plug#begin('~/.vim/plugged')
 
-" 外観
+" UI / 外観
 Plug 'ghifarit53/tokyonight-vim'
 Plug 'itchyny/lightline.vim'
-Plug 'ryanoasis/vim-devicons' " アイコン表示用（任意）
+Plug 'ryanoasis/vim-devicons'
+
+" ナビゲーション / ファイル操作
+Plug 'preservim/nerdtree'
 
 " 開発効率
-Plug 'preservim/nerdtree'
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 Plug 'tpope/vim-commentary'
 
 call plug#end()
 
+
 " ==========================================
-" 2. 基本設定 (動作・インデント)
+" 3. 基本設定
 " ==========================================
+
+" --- 文法・構文 ---
 syntax on
+set number
+set relativenumber
+set cursorline
 set background=dark
-set termguicolors     " 真のカラー（24bit）を有効化
+set termguicolors
 
-set number            " 行番号を表示
-set relativenumber    " 相対行番号
-set cursorline        " カーソル行をハイライト
-set laststatus=2      " ステータスラインを常時表示
-
-set tabstop=4         " Tab幅を4に
+" --- インデント ---
+set tabstop=4
 set shiftwidth=4
-set expandtab         " Tabをスペースに変換
-set smartindent       " 自動インデント
+set expandtab
+set smartindent
+set autoindent
 
-set clipboard=unnamedplus " クリップボード共有
-set updatetime=300      " 反応速度向上
+" --- 検索 ---
+set ignorecase
+set smartcase
+set incsearch
+set hlsearch
 
-set ignorecase    " 検索で大文字小文字を無視
-set smartcase     " 大文字を含む場合は区別
-set incsearch     " インクリメンタル検索
-set hlsearch      " 検索結果をハイライト
+" --- パフォーマンス / その他 ---
+set laststatus=2
+set updatetime=300
+set clipboard=unnamedplus
 
-" Escで検索ハイライトを消す
-nnoremap <Esc> :nohlsearch<CR>
 
 " ==========================================
-" 3. プラグイン・外観設定
+" 4. 外観設定（テーマ・ステータスラインなど）
 " ==========================================
-" --- 先に Lightline の設定を読み込む ---
+
+" --- Tokyo Night Theme ---
+let g:tokyonight_style = 'night'
+let g:tokyonight_enable_italic = 1
+colorscheme tokyonight
+
+" --- 背景透過設定 ---
+highlight Normal guibg=NONE ctermbg=NONE
+highlight NonText guibg=NONE ctermbg=NONE
+highlight LineNr guibg=NONE ctermbg=NONE
+highlight SignColumn guibg=NONE ctermbg=NONE
+highlight EndOfBuffer guibg=NONE ctermbg=NONE
+
+" --- Lightline 設定 ---
 let g:lightline = {
       \ 'colorscheme': 'tokyonight',
       \ 'active': {
@@ -55,24 +88,81 @@ let g:lightline = {
       \ }
       \ }
 
-" --- 次に Tokyo Night の設定と適用を行う ---
-let g:tokyonight_style = 'night'
-let g:tokyonight_enable_italic = 1
-
-colorscheme tokyonight
-
-" 背景透過設定 (colorscheme適用直後に記述)
-highlight Normal guibg=NONE ctermbg=NONE
-highlight NonText guibg=NONE ctermbg=NONE
-highlight LineNr guibg=NONE ctermbg=NONE
-highlight SignColumn guibg=NONE ctermbg=NONE
-highlight EndOfBuffer guibg=NONE ctermbg=NONE
 
 " ==========================================
-" 4. キーバインド
+" 5. Coc.nvim 拡張機能
 " ==========================================
-" 挿入モードから jj で脱出
+let g:coc_global_extensions = [
+      \ 'coc-html',
+      \ 'coc-css',
+      \ 'coc-tsserver',
+      \ 'coc-pyright',
+      \ 'coc-rust-analyzer',
+      \ 'coc-go',
+      \ 'coc-clangd',
+      \ 'coc-java',
+      \ 'coc-sh',
+      \ 'coc-yaml',
+      \ 'coc-sql',
+      \ 'coc-json',
+      \ 'coc-vimlsp',
+      \ 'coc-markdown-preview-enhanced',
+      \ 'coc-webview',
+      \ 'coc-docker'
+      \ ]
+
+" ==========================================
+" 6. キーバインド
+" ==========================================
+
+" --- 基本操作 ---
 inoremap jj <Esc>
 
-" Ctrl + n でファイルツリー (NERDTree) を開閉
+" --- ファイルツリー (NERDTree) ---
 nnoremap <C-n> :NERDTreeToggle<CR>
+
+" --- 検索ハイライト解除 ---
+nnoremap <Esc> :nohlsearch<CR>
+
+" --- Coc.nvim 補完操作設定 ---
+inoremap <silent><expr> <TAB>
+      \ coc#pum#visible() ? coc#pum#next(1) :
+      \ CheckBackspace() ? "\<Tab>" :
+      \ coc#refresh()
+inoremap <expr><S-TAB> coc#pum#visible() ? coc#pum#prev(1) : "\<C-h>"
+
+inoremap <silent><expr> <CR> coc#pum#visible() ? coc#pum#confirm()
+                              \: "\<C-g>u\<CR>"
+
+function! CheckBackspace() abort
+  let col = col('.') - 1
+  return !col || getline('.')[col - 1]  =~# '\s'
+endfunction
+
+" Markdownプレビューのショートカット
+autocmd FileType markdown nnoremap <C-p> :CocCommand markdown-preview-enhanced.openPreview<CR>
+
+" --- 言語サーバーのアクション ---
+" 定義ジャンプ (GoTo Definition)
+nmap <silent> gd <Plug>(coc-definition)
+" 参照確認 (GoTo References)
+nmap <silent> gr <Plug>(coc-references)
+" 型定義ジャンプ
+nmap <silent> gy <Plug>(coc-type-definition)
+" 実装ジャンプ
+nmap <silent> gi <Plug>(coc-implementation)
+
+" K でホバー表示（ドキュメント確認）
+nnoremap <silent> K :call ShowDocumentation()<CR>
+function! ShowDocumentation()
+  if CocAction('hasProvider', 'hover')
+    call CocActionAsync('doHover')
+  else
+    call feedkeys('K', 'in')
+  endif
+endfunction
+
+" コードアクション (エラーの自動修正提案など)
+nmap <leader>ac <Plug>(coc-codeaction)
+" リネーム (変数名の一括変更)
+nmap <leader>rn <Plug>(coc-rename)
