@@ -1,0 +1,32 @@
+# 空行を消す
+add_newline = false
+
+# 左側の表示順序（お好みで調整）
+format = """
+$directory\
+$git_branch\
+$git_status\
+$rust\
+$golang\
+$nodejs\
+$php\
+$java\
+$python\
+$line_break\
+$character"""
+
+[directory]
+style = "bold cyan"
+truncation_length = 3
+truncation_symbol = "…/"
+
+[character]
+success_symbol = "[❯](bold #9ece6a)" # TokyoNight風の緑
+error_symbol = "[❯](bold #f7768e)"   # TokyoNight風の赤
+
+[git_branch]
+symbol = " "
+style = "bold #bb9af7"
+
+[git_status]
+style = "bold #f7768e"
