@@ -63,6 +63,7 @@ set updatetime=300
 set clipboard=unnamedplus
 
 
+
 " ==========================================
 " 4. 外観設定（テーマ・ステータスラインなど）
 " ==========================================
@@ -165,4 +166,4 @@ endfunction
 " コードアクション (エラーの自動修正提案など)
 nmap <leader>ac <Plug>(coc-codeaction)
 " リネーム (変数名の一括変更)
-nmap <leader>rn <Plug>(coc-rename)
+nmap <leader>rn <Plug>(coc-rename)nnoremap <Space>p :put =system('win32yank.exe -o --lf')<CR>
