@@ -1,19 +1,7 @@
 # 空行を消す
 add_newline = false
 
-# 左側の表示順序（お好みで調整）
-format = """
-$directory\
-$git_branch\
-$git_status\
-$rust\
-$golang\
-$nodejs\
-$php\
-$java\
-$python\
-$line_break\
-$character"""
+format = "$directory$git_branch$git_status$character"
 
 [directory]
 style = "bold cyan"
