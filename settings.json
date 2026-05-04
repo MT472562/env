@@ -3,6 +3,7 @@
     "$schema": "https://aka.ms/terminal-profiles-schema",
     "actions": [],
     "alwaysShowTabs": false,
+    "centerOnLaunch": true,
     "copyFormatting": "none",
     "copyOnSelect": true,
     "defaultProfile": "{963ff2f7-6aed-5ce3-9d91-90d99571f53a}",
@@ -12,7 +13,6 @@
         "Windows.Terminal.VisualStudio",
         "Windows.Terminal.PowershellCore"
     ],
-    "centerOnLaunch": true,
     "initialCols": 175,
     "initialRows": 45,
     "keybindings": 
@@ -32,6 +32,22 @@
         {
             "id": "Terminal.DuplicatePaneAuto",
             "keys": "alt+shift+d"
+        },
+        {
+            "id": "Terminal.SplitPane",
+            "keys": "alt+shift+-"
+        },
+        {
+            "id": "Terminal.SplitPaneVertical",
+            "keys": "alt+shift+\\"
+        },
+        {
+            "id": "Terminal.ClosePane",
+            "keys": "alt+shift+w"
+        },
+        {
+            "id": "Terminal.MoveFocusNext",
+            "keys": "alt+shift+tab"
         }
     ],
     "language": "ja",
@@ -53,12 +69,17 @@
                 "font": 
                 {
                     "face": "PlemolJP Console NF",
-                    "size": 12
+                    "size": 12,
+                    "fallbackFace": "Hack"
                 },
                 "guid": "{963ff2f7-6aed-5ce3-9d91-90d99571f53a}",
                 "hidden": false,
                 "name": "Ubuntu-24.04 (Tmux)",
-                "source": "Microsoft.WSL"
+                "source": "Microsoft.WSL",
+                "useAcrylic": true,
+                "acrylicOpacity": 0.85,
+                "opacity": 85,
+                "experimental.renderingEngine": "experimental"
             },
             {
                 "commandline": "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
