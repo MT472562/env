@@ -88,6 +88,18 @@ cd() {
     builtin cd "$@" && ls
 }
 
+tmpl() {
+    local src
+    case "$1" in
+        python|py) src="main.py" ;;
+        java)      src="Main.java" ;;
+        rust|rs)   src="main.rs" ;;
+        c++|cpp)   src="main.cpp" ;;
+        *)         src="$1" ;;
+    esac
+    cp -i "$HOME/template/$src" "./$src"
+}
+
 
 # ==========================================
 # 8. 外部設定ファイルの読み込み
@@ -127,3 +139,5 @@ export PATH=$PATH:/usr/local/go/bin
 . "$HOME/.cargo/env"
 # opencode
 export PATH=/home/user/.opencode/bin:$PATH
+export BROWSER=wslviewalias ae="docker exec -it devcontainer-dev-1 bash -i"
+alias ae="docker exec -it atcoder-env_devcontainer-dev-1 bash -i"
