@@ -1,37 +1,90 @@
-あとから作る とりまメモ
-https://github.com/yuru7/PlemolJP/releases
-PlemolJPConsole_NFをインストール
+# env
 
-plug.vim
-curl -fLo ~/.vim/autoload/plug.vim --create-dirs https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-:PlugInstall
+WSL (Ubuntu) 設定ファイルのバックアップ
 
-nvm nodejs install
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+## 含まれる設定
 
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+| ファイル | 説明 |
+|---|---|
+| `[.]bashrc` | bash 設定（プロンプト、エイリアス、NVM/starship 連携） |
+| `[.]tmux.conf` | tmux 設定（Tokyo Night テーマ、CPU/RAM 表示） |
+| `[.]vimrc` | Vim 設定（Tokyo Night テーマ、coc.nvim、各種プラグイン） |
+| `[.]profile` | ログインシェル設定（.cargo/env 読み込み） |
+| `[.]cargo_env` | Rust/Cargo 環境変数 |
+| `[.]ssh_config` | SSH config（LAN用） |
+| `starship.toml` | Starship プロンプト設定 |
+| `aerc/*` | aerc メールクライアント設定 |
+| `alacritty.toml` | Alacritty 設定（元環境の参考） |
+| `settings.json` | VSCode 設定（元環境の参考） |
 
-nvm install --lts
+## セットアップ手順
 
-node -v
+### 1. リポジトリをクローン
 
+```bash
+git clone git@github.com:MT472562/env.git ~/env
+cd ~/env
+```
 
-Tmux
+### 2. 設定ファイルを配置
 
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-Prefix + I
+```bash
+cp [.]bashrc     ~/.bashrc
+cp [.]tmux.conf  ~/.tmux.conf
+cp [.]vimrc      ~/.vimrc
+cp [.]profile    ~/.profile
+cp [.]cargo_env  ~/.cargo/env
+cp [.]ssh_config ~/.ssh/config
+cp starship.toml ~/.config/starship.toml
+```
 
-vim 
-curl -sS https://starship.rs/install.sh | sh
-.vimrc末尾追加```eval "$(starship init bash)"```
+### 3. フォントのインストール
+
+[PlemolJP Console NF](https://github.com/yuru7/PlemolJP/releases) をダウンロードしてインストール。
+ターミナル（Windows Terminal / Alacritty）のフォントに設定する。
+
+### 4. パッケージのインストール
+
+```bash
 sudo apt update
 sudo apt install -y eza
+```
 
+### 5. NVM / Node.js
 
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+exec $SHELL
+nvm install --lts
+```
 
-curl -sS https://starship.rs/install.sh | sh
+### 6. Rust
 
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+exec $SHELL
+```
 
+### 7. Starship
+
+```bash
+curl -sS https://starship.rs/install.sh | sh
+```
+
+### 8. Tmux プラグイン
+
+```bash
+git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+```
+tmux 内で `Prefix + I` を押してプラグインをインストール。
+
+### 9. Vim プラグイン
+
+Vim を開くと自動で vim-plug がインストールされ、`:PlugInstall` のプロンプトが表示されるので実行する。
+
+または手動で:
+```bash
+curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
+  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+vim +PlugInstall +qall
+```
