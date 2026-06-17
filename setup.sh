@@ -11,7 +11,7 @@ cp -v "[.]tmux.conf"  ~/.tmux.conf
 cp -v "[.]vimrc"      ~/.vimrc
 cp -v "[.]profile"    ~/.profile
 cp -v "[.]cargo_env"  ~/.cargo/env
-mkdir -p ~/.config/starship.toml && rm -f ~/.config/starship.toml
+mkdir -p ~/.config
 cp -v starship.toml   ~/.config/starship.toml
 mkdir -p ~/.config/aerc
 cp -v aerc/*          ~/.config/aerc/
