@@ -32,34 +32,7 @@ export COLORTERM=truecolor
 
 
 # ==========================================
-# 5. プロンプト設定
-# ==========================================
-case "$TERM" in
-    xterm-color|*-256color)
-        color_prompt=yes
-        ;;
-esac
-
-if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
-    color_prompt=yes
-fi
-
-if [ "$color_prompt" = yes ]; then
-    PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-else
-    PS1='\u@\h:\w\$ '
-fi
-unset color_prompt
-
-case "$TERM" in
-    xterm*|rxvt*)
-        PS1="\[\e]0;\u@\h: \w\a\]$PS1"
-        ;;
-esac
-
-
-# ==========================================
-# 6. エイリアス設定
+# 5. エイリアス設定
 # ==========================================
 
 # Eza (ls の置き換え)
@@ -81,7 +54,7 @@ alias egrep='egrep --color=auto'
 
 
 # ==========================================
-# 7. 機能関数
+# 6. 機能関数
 # ==========================================
 
 cd() {
@@ -102,7 +75,7 @@ tmpl() {
 
 
 # ==========================================
-# 8. 外部設定ファイルの読み込み
+# 7. 外部設定ファイルの読み込み
 # ==========================================
 
 # Bash Completion
@@ -121,7 +94,7 @@ fi
 
 
 # ==========================================
-# 9. 開発環境設定
+# 8. 開発環境設定
 # ==========================================
 
 # NVM (Node Version Manager)
@@ -138,6 +111,6 @@ fi
 export PATH=$PATH:/usr/local/go/bin
 . "$HOME/.cargo/env"
 # opencode
-export PATH=/home/user/.opencode/bin:$PATH
-export BROWSER=wslviewalias ae="docker exec -it devcontainer-dev-1 bash -i"
+export PATH="$HOME/.opencode/bin:$PATH"
+export BROWSER=wslview
 alias ae="docker exec -it atcoder-env_devcontainer-dev-1 bash -i"
