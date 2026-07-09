@@ -1,15 +1,31 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "=== env setup ==="
+REPO_URL="https://github.com/MT472562/env.git"
+REPO_DIR="$HOME/env"
 
-cd "$(dirname "$0")"
+# このスクリプトがリポジトリ内から実行されているか確認
+if [ ! -f "$(dirname "$0")/[.]tmux.conf" ]; then
+  echo "--- Cloning env repo ---"
+  if [ -d "$REPO_DIR" ]; then
+    echo "Updating existing repo..."
+    git -C "$REPO_DIR" pull
+  else
+    git clone "$REPO_URL" "$REPO_DIR"
+  fi
+  cd "$REPO_DIR"
+else
+  cd "$(dirname "$0")"
+fi
+
+echo "=== env setup ==="
 
 echo "--- Config files ---"
 cp -v "[.]bashrc"     ~/.bashrc
 cp -v "[.]tmux.conf"  ~/.tmux.conf
 cp -v "[.]vimrc"      ~/.vimrc
 cp -v "[.]profile"    ~/.profile
+mkdir -p ~/.cargo
 cp -v "[.]cargo_env"  ~/.cargo/env
 mkdir -p ~/.config
 cp -v starship.toml   ~/.config/starship.toml
@@ -17,6 +33,7 @@ mkdir -p ~/.config/aerc
 cp -v aerc/*          ~/.config/aerc/
 mkdir -p ~/.ssh
 cp -v "[.]ssh_config" ~/.ssh/config
+
 echo "--- Tmux sub-configs ---"
 mkdir -p ~/.tmux
 cp -v tmux/*.conf tmux/paste.sh ~/.tmux/
