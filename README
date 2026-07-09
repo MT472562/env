@@ -1,90 +1,28 @@
 # env
 
-WSL (Ubuntu) 設定ファイルのバックアップ
+設定ファイルの管理リポジトリ
 
 ## 含まれる設定
 
 | ファイル | 説明 |
 |---|---|
-| `[.]bashrc` | bash 設定（プロンプト、エイリアス、NVM/starship 連携） |
-| `[.]tmux.conf` | tmux 設定（Tokyo Night テーマ、CPU/RAM 表示） |
-| `[.]vimrc` | Vim 設定（Tokyo Night テーマ、coc.nvim、各種プラグイン） |
-| `[.]profile` | ログインシェル設定（.cargo/env 読み込み） |
-| `[.]cargo_env` | Rust/Cargo 環境変数 |
-| `[.]ssh_config` | SSH config（LAN用） |
+| `.bashrc` | bash 設定（プロンプト、エイリアス、NVM/starship 連携） |
+| `.tmux.conf` | tmux 設定（Tokyo Night テーマ、モジュール分割） |
+| `.vimrc` | Vim 設定 |
+| `.profile` | ログインシェル設定 |
+| `cargo_env` | Rust/Cargo 環境変数（→ `~/.cargo/env`） |
+| `ssh_config` | SSH config（→ `~/.ssh/config`） |
+| `tmux/*.conf` | tmux モジュール設定 |
 | `starship.toml` | Starship プロンプト設定 |
 | `aerc/*` | aerc メールクライアント設定 |
-| `alacritty.toml` | Alacritty 設定（元環境の参考） |
-| `settings.json` | VSCode 設定（元環境の参考） |
 
-## セットアップ手順
-
-### 1. リポジトリをクローン
+## セットアップ
 
 ```bash
-git clone git@github.com:MT472562/env.git ~/env
-cd ~/env
+bash <(curl -fsSL https://raw.githubusercontent.com/MT472562/env/main/setup.sh)
 ```
 
-### 2. 設定ファイルを配置
-
+またはクローン後:
 ```bash
-cp [.]bashrc     ~/.bashrc
-cp [.]tmux.conf  ~/.tmux.conf
-cp [.]vimrc      ~/.vimrc
-cp [.]profile    ~/.profile
-cp [.]cargo_env  ~/.cargo/env
-cp [.]ssh_config ~/.ssh/config
-cp starship.toml ~/.config/starship.toml
-```
-
-### 3. フォントのインストール
-
-[PlemolJP Console NF](https://github.com/yuru7/PlemolJP/releases) をダウンロードしてインストール。
-ターミナル（Windows Terminal / Alacritty）のフォントに設定する。
-
-### 4. パッケージのインストール
-
-```bash
-sudo apt update
-sudo apt install -y eza
-```
-
-### 5. NVM / Node.js
-
-```bash
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-exec $SHELL
-nvm install --lts
-```
-
-### 6. Rust
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-exec $SHELL
-```
-
-### 7. Starship
-
-```bash
-curl -sS https://starship.rs/install.sh | sh
-```
-
-### 8. Tmux プラグイン
-
-```bash
-git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
-```
-tmux 内で `Prefix + I` を押してプラグインをインストール。
-
-### 9. Vim プラグイン
-
-Vim を開くと自動で vim-plug がインストールされ、`:PlugInstall` のプロンプトが表示されるので実行する。
-
-または手動で:
-```bash
-curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
-  https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-vim +PlugInstall +qall
+cd ~/env && bash setup.sh
 ```

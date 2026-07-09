@@ -5,7 +5,7 @@ REPO_URL="https://github.com/MT472562/env.git"
 REPO_DIR="$HOME/env"
 
 # このスクリプトがリポジトリ内から実行されているか確認
-if [ ! -f "$(dirname "$0")/[.]tmux.conf" ]; then
+if [ ! -f "$(dirname "$0")/.tmux.conf" ]; then
   echo "--- Cloning env repo ---"
   if [ -d "$REPO_DIR" ]; then
     echo "Updating existing repo..."
@@ -21,18 +21,18 @@ fi
 echo "=== env setup ==="
 
 echo "--- Config files ---"
-cp -v "[.]bashrc"     ~/.bashrc
-cp -v "[.]tmux.conf"  ~/.tmux.conf
-cp -v "[.]vimrc"      ~/.vimrc
-cp -v "[.]profile"    ~/.profile
+cp -v .bashrc     ~/.bashrc
+cp -v .tmux.conf  ~/.tmux.conf
+cp -v .vimrc      ~/.vimrc
+cp -v .profile    ~/.profile
 mkdir -p ~/.cargo
-cp -v "[.]cargo_env"  ~/.cargo/env
+cp -v cargo_env   ~/.cargo/env
 mkdir -p ~/.config
 cp -v starship.toml   ~/.config/starship.toml
 mkdir -p ~/.config/aerc
 cp -v aerc/*          ~/.config/aerc/
 mkdir -p ~/.ssh
-cp -v "[.]ssh_config" ~/.ssh/config
+cp -v ssh_config ~/.ssh/config
 
 echo "--- Tmux sub-configs ---"
 mkdir -p ~/.tmux
