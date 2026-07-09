@@ -22,6 +22,8 @@ echo "=== env setup ==="
 
 echo "--- Config files ---"
 cp -v .bashrc     ~/.bashrc
+mkdir -p ~/.bashrc.d
+cp -v bashrc.d/*.sh ~/.bashrc.d/
 cp -v .tmux.conf  ~/.tmux.conf
 cp -v .vimrc      ~/.vimrc
 cp -v .profile    ~/.profile

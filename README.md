@@ -16,10 +16,12 @@ cd ~/env && bash setup.sh
 
 ## 構成
 
+### ルート
+
 | ファイル | 説明 |
 |---|---|
-| `.bashrc` | bash: プロンプト、エイリアス、NVM/starship 連携 |
-| `.tmux.conf` | tmux: モジュールを `source-file` で読み込み |
+| `.bashrc` | bashrc.d/*.sh を読み込むだけ |
+| `.tmux.conf` | tmux/ モジュールを source-file |
 | `.vimrc` | Vim: プラグイン、テーマ設定 |
 | `.profile` | ログインシェル設定 |
 | `cargo_env` | Rust/Cargo 環境変数（`~/.cargo/env`） |
@@ -28,7 +30,27 @@ cd ~/env && bash setup.sh
 | `alacritty.toml` | Alacritty 設定（参考） |
 | `settings.json` | VSCode 設定（参考） |
 
-### tmux モジュール (`tmux/`)
+### bashrc.d/ (bash モジュール)
+
+| ファイル | 内容 | 有効化 |
+|---|---|---|
+| `00-base.sh` | 基本チェック、履歴、shopt | 常時 |
+| `10-aliases.sh` | エイリアス (eza/ls, grep) | 常時 |
+| `20-functions.sh` | cd() 自動ls, tmpl() | 常時 |
+| `30-completion.sh` | bash-completion | 常時 |
+| `40-nvm.sh` | NVM 読み込み | NVM 使用端末 |
+| `50-starship.sh` | Starship プロンプト | Starship 使用端末 |
+| `60-cargo.sh` | Cargo パス、Go パス | Rust/Go 使用端末 |
+| `70-opencode.sh` | opencode PATH、エイリアス | 端末固有 |
+| `80-local.sh` | ~/.bashrc.local があれば読む | 常時 |
+
+不要なモジュールは削除するか、空ファイルで上書き:
+```bash
+# NVM 要らない場合
+echo -n > ~/.bashrc.d/40-nvm.sh
+```
+
+### tmux/ (tmux モジュール)
 
 | ファイル | 内容 | 有効化 |
 |---|---|---|
@@ -38,7 +60,7 @@ cd ~/env && bash setup.sh
 | `30-plugins.conf` | tpm、tmux-sensible、tmux-cpu | 常時 |
 | `40-copy-paste-wayland.conf` | wl-clipboard 連携コピペ | Wayland 端末のみ |
 
-`.tmux.conf` で不要なモジュールをコメントアウト:
+`.tmux.conf` でコメントアウト制御:
 ```tmux
 source-file ~/.tmux/00-base.conf
 source-file ~/.tmux/10-theme.conf
@@ -49,6 +71,4 @@ source-file ~/.tmux/30-plugins.conf
 
 ## 端末ごとのカスタマイズ
 
-`~/.tmux.conf` のモジュールコメントアウトで対応。ブランチは切らず、単一の `main` で管理します。
-
-tmux モジュール以外の端末固有設定（`.bashrc` の追記など）は `~/.bashrc.local` などのローカルファイルに書き、`.gitignore` で管理外とします。
+tmux は `.tmux.conf` のコメントアウト、bash は `~/.bashrc.local` に書く、または `bashrc.d/` の該当ファイルを空にする、で対応します。
