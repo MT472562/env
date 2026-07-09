@@ -70,13 +70,12 @@ echo "--- Tmux TPM ---"
 if [ ! -d ~/.tmux/plugins/tpm ]; then
   git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
-echo "Run 'Prefix + I' inside tmux to install plugins."
 
 echo "--- Vim ---"
 if [ ! -f ~/.vim/autoload/plug.vim ]; then
   curl -fLo ~/.vim/autoload/plug.vim --create-dirs \
     https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
 fi
-echo "Run ':PlugInstall' inside vim to install plugins."
 
-echo "=== Done! Restart your shell: exec \$SHELL ==="
+echo "=== Apply ==="
+bash deploy.sh

@@ -14,6 +14,11 @@ git clone git@github.com:MT472562/env.git ~/env
 cd ~/env && bash setup.sh
 ```
 
+設定だけ再適用（tmux・vim・shell も自動反映）:
+```bash
+cd ~/env && bash deploy.sh
+```
+
 ## 構成
 
 ### ルート
