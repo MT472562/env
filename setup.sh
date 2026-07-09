@@ -17,6 +17,9 @@ mkdir -p ~/.config/aerc
 cp -v aerc/*          ~/.config/aerc/
 mkdir -p ~/.ssh
 cp -v "[.]ssh_config" ~/.ssh/config
+echo "--- Tmux sub-configs ---"
+mkdir -p ~/.tmux
+cp -v tmux/*.conf tmux/paste.sh ~/.tmux/
 
 echo "--- Font ---"
 echo "Install PlemolJP Console NF from:"
