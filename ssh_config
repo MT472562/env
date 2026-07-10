@@ -2,3 +2,6 @@
 Match host 10.10.0.*
   User server
   IdentityFile ~/.ssh/lan-ssh-key
+
+Match host *.maruchan.dev,*.v4v6.net,*.sh3.uk
+  IdentityFile ~/.ssh/oci.key
