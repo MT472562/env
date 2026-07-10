@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 TARGET="${1:-proxy.maruchan.dev}"
 COUNT=10
@@ -10,6 +10,8 @@ PASS()   { RESULTS+=("[PASS] $1"); }
 WARN()   { RESULTS+=("[WARN] $1"); }
 FAIL()   { RESULTS+=("[FAIL] $1"); }
 
+has() { command -v "$1" &>/dev/null; }
+
 echo "=============================================="
 echo "  ネットワーク診断: $TARGET"
 echo "=============================================="
@@ -19,37 +21,37 @@ echo ""
 echo "──────────────────────────────"
 echo " [1] DNS 名前解決"
 echo "──────────────────────────────"
-A_RECORDS=()
-if dig "$TARGET" +short A 2>/dev/null | head -5; then
-  mapfile -t A_RECORDS < <(dig "$TARGET" +short A 2>/dev/null)
+if has dig; then
+  A_RECORDS=()
+  while IFS= read -r line; do
+    A_RECORDS+=("$line")
+    echo "$line"
+  done < <(dig "$TARGET" +short A 2>/dev/null || true)
   if [ ${#A_RECORDS[@]} -gt 0 ]; then
     PASS "A レコード: ${A_RECORDS[*]}"
   else
     FAIL "A レコードが解決できません"
   fi
-else
-  FAIL "dig が利用できません"
-fi
-echo ""
 
-AAAA_RECORDS=()
-AAAA_OUT=$(dig "$TARGET" +short AAAA 2>/dev/null)
-if [ -n "$AAAA_OUT" ]; then
-  mapfile -t AAAA_RECORDS <<< "$AAAA_OUT"
-  NOTE "AAAA レコード: ${AAAA_RECORDS[*]}"
-else
-  NOTE "AAAA レコードなし (IPv6非対応)"
-fi
-
-# 逆引き
-for ip in "${A_RECORDS[@]}"; do
-  PTR=$(dig +short -x "$ip" 2>/dev/null | head -1)
-  if [ -n "$PTR" ]; then
-    NOTE "逆引き ($ip): $PTR"
+  AAAA_OUT=$(dig "$TARGET" +short AAAA 2>/dev/null || true)
+  if [ -n "$AAAA_OUT" ]; then
+    NOTE "AAAA レコードあり (IPv6対応)"
   else
-    NOTE "逆引き ($ip): なし"
+    NOTE "AAAA レコードなし (IPv6非対応)"
   fi
-done
+
+  for ip in "${A_RECORDS[@]}"; do
+    PTR=$(dig +short -x "$ip" 2>/dev/null || true)
+    if [ -n "$PTR" ]; then
+      NOTE "逆引き ($ip): $PTR"
+    else
+      NOTE "逆引き ($ip): なし"
+    fi
+  done
+else
+  FAIL "dig がインストールされていません"
+  WARN "→ sudo apt install dnsutils"
+fi
 echo ""
 
 # ── 2. Ping ──
@@ -58,9 +60,8 @@ echo " [2] Ping 疎通確認 (${COUNT}回)"
 echo "──────────────────────────────"
 ping_out=$(ping -c "$COUNT" -W 3 "$TARGET" 2>&1 || true)
 echo "$ping_out"
-echo ""
-packet_loss=$(echo "$ping_out" | grep -oP '\d+% packet loss' | grep -oP '\d+')
-rtt_avg=$(echo "$ping_out" | grep -oP 'rtt min/avg/max/mdev = [\d.]+/[\d.]+/[\d.]+/[\d.]+' | cut -d'/' -f4)
+packet_loss=$(echo "$ping_out" | grep -oP '\d+(?=% packet loss)' || echo "100")
+rtt_avg=$(echo "$ping_out" | grep -oP 'min/avg/max/mdev = [\d.]+/[\d.]+/[\d.]+/[\d.]+' | cut -d'/' -f4 || true)
 if [ "$packet_loss" = "0" ]; then
   PASS "パケロス 0%"
 elif [ "$packet_loss" -le 5 ]; then
@@ -77,17 +78,17 @@ echo ""
 echo "──────────────────────────────"
 echo " [3] Traceroute"
 echo "──────────────────────────────"
-if command -v mtr &>/dev/null; then
+if has mtr; then
   mtr -r -c 3 -n "$TARGET" 2>&1 || true
-elif command -v traceroute &>/dev/null; then
+elif has traceroute; then
   traceroute -n -q 1 -w 3 "$TARGET" 2>&1 || true
 else
-  WARN "traceroute/mtr が利用できません"
+  WARN "traceroute/mtr がありません"
 fi
 echo ""
 
 # ── 4. MTR ──
-if command -v mtr &>/dev/null; then
+if has mtr; then
   echo "──────────────────────────────"
   echo " [4] MTR (3秒間)"
   echo "──────────────────────────────"
@@ -104,7 +105,7 @@ check_port() {
   if timeout 3 bash -c "echo >/dev/tcp/$TARGET/$port" 2>/dev/null; then
     PASS "Port $port ($label): 疎通OK"
   else
-    WARN "Port $port ($label): 疎通できず"
+    WARN "Port $port ($label): 不通"
   fi
 }
 check_port 22    SSH
@@ -131,37 +132,44 @@ http_check http
 http_check https
 echo ""
 
-# ── 7. SSL証明書 (HTTPS) ──
+# ── 7. SSL証明書 ──
 echo "──────────────────────────────"
 echo " [7] SSL 証明書情報"
 echo "──────────────────────────────"
-ssl_info=$(echo | openssl s_client -connect "${TARGET}:443" -servername "$TARGET" 2>/dev/null </dev/null | openssl x509 -noout -subject -issuer -dates 2>/dev/null || true)
-if [ -n "$ssl_info" ]; then
-  echo "$ssl_info"
-  PASS "SSL証明書取得OK"
+if has openssl; then
+  ssl_info=$(echo | openssl s_client -connect "${TARGET}:443" -servername "$TARGET" 2>/dev/null </dev/null | openssl x509 -noout -subject -issuer -dates 2>/dev/null || true)
+  if [ -n "$ssl_info" ]; then
+    echo "$ssl_info"
+    PASS "SSL証明書取得OK"
+  else
+    WARN "SSL証明書が取得できません"
+  fi
 else
-  WARN "SSL証明書が取得できません"
+  WARN "openssl がありません"
 fi
 echo ""
 
-# ── 8. iperf 速度テスト (簡易) ──
+# ── 8. iperf 簡易速度 ──
 echo "──────────────────────────────"
-echo " [8] iperf 速度"
+echo " [8] iperf 速度 (5秒)"
 echo "──────────────────────────────"
-SSH_USER="${2:-ubuntu}"
-HOST_SSH="$SSH_USER@$TARGET"
-cleanup() { ssh "$HOST_SSH" "pkill iperf 2>/dev/null; pkill iperf3 2>/dev/null" || true; }
-trap cleanup EXIT
-
-ssh "$HOST_SSH" "iperf -s >/dev/null 2>&1 &" 2>/dev/null || true
-sleep 0.5
-iperf_out=$(iperf -c "$TARGET" -t 5 2>&1 || true)
-cleanup
-bw=$(echo "$iperf_out" | grep -oP '\d+\.?\d*\s+Mbits/sec' | awk '{print $1}')
-if [ -n "$bw" ]; then
-  PASS "iperf: ${bw} Mbits/sec"
+if has iperf && has ssh; then
+  SSH_USER="${2:-ubuntu}"
+  HOST_SSH="$SSH_USER@$TARGET"
+  cleanup() { ssh "$HOST_SSH" "pkill iperf 2>/dev/null; pkill iperf3 2>/dev/null" || true; }
+  trap cleanup EXIT
+  ssh "$HOST_SSH" "iperf -s >/dev/null 2>&1 &" 2>/dev/null || true
+  sleep 0.5
+  iperf_out=$(iperf -c "$TARGET" -t 5 2>&1 || true)
+  cleanup
+  bw=$(echo "$iperf_out" | grep -oP '\d+\.?\d*(?= Mbits/sec)' | tail -1 || true)
+  if [ -n "$bw" ]; then
+    PASS "iperf: ${bw} Mbits/sec"
+  else
+    WARN "iperf 速度テストが完了しませんでした"
+  fi
 else
-  WARN "iperf 速度テストが完了しませんでした"
+  WARN "iperf または ssh がありません"
 fi
 echo ""
 
