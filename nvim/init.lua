@@ -102,7 +102,7 @@ require("lazy").setup({
   { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
   { "lewis6991/gitsigns.nvim", opts = {} },
   { "folke/trouble.nvim", dependencies = { "nvim-tree/nvim-web-devicons" }, opts = {} },
-  { "lukas-reineke/indent-blankline.nvim", opts = {} },
+  { "lukas-reineke/indent-blankline.nvim", config = function() require("ibl").setup() end },
 })
 
 
@@ -158,8 +158,18 @@ local servers = {
   vimls = {}, dockerls = {}
 }
 
+-- 各言語サーバーをNeovimクライアントと接続
+local capabilities = require("cmp_nvim_lsp").default_capabilities()
+
 require("mason-lspconfig").setup({
   ensure_installed = vim.tbl_keys(servers),
+  handlers = {
+    function(server_name)
+      require("lspconfig")[server_name].setup({
+        capabilities = capabilities,
+      })
+    end,
+  },
 })
 
 -- LSPが有効になったバッファでのみ有効にするキーバインド (Cocの機能を完全移植)
@@ -179,16 +189,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
     vim.keymap.set("n", "<leader>.", vim.lsp.buf.code_action, opts)
     -- エラーの再起動（ゾンビエラー対策）
     vim.keymap.set("n", "<leader>cr", ":LspRestart<CR>", opts)
-  end,
-})
-
--- 各言語サーバーをNeovimクライアントと接続
-local capabilities = require("cmp_nvim_lsp").default_capabilities()
-require("mason-lspconfig").setup_handlers({
-  function(server_name)
-    require("lspconfig")[server_name].setup({
-      capabilities = capabilities,
-    })
   end,
 })
 
