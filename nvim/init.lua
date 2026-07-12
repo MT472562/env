@@ -152,7 +152,7 @@ require("mason").setup()
 
 -- あなたが Coc で使っていた言語サーバーをすべて Native LSP 用に定義
 local servers = {
-  html = {}, cssls = {}, tsserver = {}, pyright = {},
+  html = {}, cssls = {},   ts_ls = {}, pyright = {},
   rust_analyzer = {}, gopls = {}, clangd = {}, jdtls = {},
   bashls = {}, yamlls = {}, sqlls = {}, jsonls = {},
   vimls = {}, dockerls = {}
