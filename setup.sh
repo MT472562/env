@@ -337,14 +337,21 @@ install_packages() {
   # GitHub は gh に統一
   install_gh
 
+  # Neovim 本体（設定ファイルは deploy.sh が ~/.config/nvim へ配置）
   if ! command -v nvim >/dev/null 2>&1; then
-    echo "--- neovim ---"
+    echo "--- Neovim 本体をインストール ---"
     if command -v apt-get >/dev/null 2>&1; then
       sudo apt-get install -y neovim || true
     fi
     if ! command -v nvim >/dev/null 2>&1; then
-      echo "nvim が見つかりません。手動インストール: https://github.com/neovim/neovim/releases"
+      echo "nvim が見つかりません。"
+      echo "  手動: https://github.com/neovim/neovim/releases"
+      echo "  または: ~/.local/bin に nvim を置いてください"
+    else
+      echo "nvim をインストールしました: $(command -v nvim)"
     fi
+  else
+    echo "--- nvim は利用可能: $(command -v nvim) ---"
   fi
 
   if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
@@ -436,6 +443,8 @@ if [ "$DEPLOY_ONLY" -eq 0 ]; then
   install_packages
 fi
 
+echo
+echo "--- 設定ファイルをホームに配置（nvim 含む）---"
 bash "$ROOT/deploy.sh"
 
 if [ "$DO_SSH" -eq 1 ] && [ "$DEPLOY_ONLY" -eq 0 ]; then
@@ -445,7 +454,9 @@ fi
 echo
 echo "=== セットアップ完了 ==="
 echo "  bash     : ~/.bashrc + ~/.bashrc.d/"
-echo "  neovim   : ~/.config/nvim （初回起動でプラグイン導入）"
+echo "  neovim   : env/nvim → ~/.config/nvim"
+echo "             （init.lua / lua/config / lua/plugins）"
+echo "             初回 nvim 起動で lazy.nvim がプラグイン導入"
 echo "  tmux     : ~/.tmux.conf"
 echo "  GitHub   : gh auth status で確認"
 echo "  サーバ鍵 : ~/.ssh/ （LAN / クラウド用）"

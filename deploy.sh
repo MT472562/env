@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Apply env configs to $HOME (no package installs).
+# env の設定を $HOME に反映する（パッケージ導入はしない）
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -11,14 +11,51 @@ copy_file() {
   cp -v "$src" "$dest"
 }
 
-echo "=== deploy configs ==="
+# Neovim: env/nvim/ → ~/.config/nvim/
+deploy_nvim() {
+  local src="$ROOT/nvim"
+  local dest="$HOME/.config/nvim"
+
+  if [ ! -d "$src" ]; then
+    echo "警告: $src がありません（nvim 設定をスキップ）" >&2
+    return 0
+  fi
+  if [ ! -f "$src/init.lua" ]; then
+    echo "警告: $src/init.lua がありません" >&2
+    return 0
+  fi
+
+  mkdir -p "$dest"
+
+  if command -v rsync >/dev/null 2>&1; then
+    # リポジトリ側を正とし、ホーム側の余分なファイルは消す
+    rsync -a --delete \
+      --exclude='.git' \
+      --exclude='lazy-lock.json.bak' \
+      "$src/" "$dest/"
+  else
+    # rsync が無い環境向けフォールバック
+    find "$dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} + 2>/dev/null || true
+    cp -a "$src"/. "$dest"/
+  fi
+
+  echo "Neovim 設定を配置しました: $src → $dest"
+  echo "  init.lua / lua/config / lua/plugins など"
+  if command -v nvim >/dev/null 2>&1; then
+    echo "  nvim: $(command -v nvim) （$(nvim --version 2>/dev/null | head -1)）"
+  else
+    echo "  注意: nvim コマンドが見つかりません。setup.sh で入れるか手動インストールしてください"
+  fi
+  echo "  プラグインは初回の nvim 起動時に lazy.nvim が導入します"
+}
+
+echo "=== 設定をデプロイ ==="
 
 copy_file "$ROOT/.bashrc" "$HOME/.bashrc"
 copy_file "$ROOT/.profile" "$HOME/.profile"
 copy_file "$ROOT/.tmux.conf" "$HOME/.tmux.conf"
 
 mkdir -p "$HOME/.bashrc.d"
-# Drop obsolete modules if present
 rm -f "$HOME/.bashrc.d/"*.bak 2>/dev/null || true
 cp -v "$ROOT"/bashrc.d/*.sh "$HOME/.bashrc.d/"
 
@@ -29,22 +66,17 @@ chmod +x "$HOME/.tmux/paste.sh"
 mkdir -p "$HOME/.config"
 [ -f "$ROOT/starship.toml" ] && copy_file "$ROOT/starship.toml" "$HOME/.config/starship.toml"
 
-# Neovim (modular Lua config)
-if [ -d "$ROOT/nvim" ]; then
-  mkdir -p "$HOME/.config/nvim"
-  rsync -a --delete \
-    --exclude='.git' \
-    "$ROOT/nvim/" "$HOME/.config/nvim/"
-  echo "nvim → ~/.config/nvim"
-fi
+# --- Neovim ---
+deploy_nvim
 
-# aerc: never overwrite existing accounts (may contain secrets)
+# aerc: 既存の accounts.conf は上書きしない（秘密情報が入っているため）
 mkdir -p "$HOME/.config/aerc"
 for f in "$ROOT"/aerc/*; do
+  [ -e "$f" ] || continue
   base="$(basename "$f")"
   [[ "$base" == *.example ]] && continue
   if [ "$base" = "accounts.conf" ] && [ -f "$HOME/.config/aerc/accounts.conf" ]; then
-    echo "skip aerc/accounts.conf (already exists)"
+    echo "skip aerc/accounts.conf （既存を保持）"
     continue
   fi
   copy_file "$f" "$HOME/.config/aerc/$base"
@@ -53,7 +85,7 @@ if [ ! -f "$HOME/.config/aerc/accounts.conf" ] && [ -f "$ROOT/aerc/accounts.conf
   copy_file "$ROOT/aerc/accounts.conf.example" "$HOME/.config/aerc/accounts.conf.example"
 fi
 
-# SSH config (keys are never shipped — only config template)
+# SSH config（鍵本体は含めない）
 mkdir -p "$HOME/.ssh"
 chmod 700 "$HOME/.ssh"
 if [ -f "$ROOT/ssh_config" ]; then
@@ -61,22 +93,21 @@ if [ -f "$ROOT/ssh_config" ]; then
   chmod 600 "$HOME/.ssh/config"
 fi
 
-# Cargo env helper (only if cargo not yet installed)
 if [ -f "$ROOT/cargo_env" ] && [ ! -f "$HOME/.cargo/env" ]; then
   mkdir -p "$HOME/.cargo"
   copy_file "$ROOT/cargo_env" "$HOME/.cargo/env"
 fi
 
-# Remove obsolete Vim-era files from home if empty/unused markers
+# 空の古い .vimrc は削除
 if [ -f "$HOME/.vimrc" ] && [ ! -s "$HOME/.vimrc" ]; then
   rm -v "$HOME/.vimrc" || true
 fi
 
-echo "--- reload hooks ---"
+echo "--- リロード ---"
 if command -v tmux >/dev/null 2>&1; then
-  tmux source-file "$HOME/.tmux.conf" 2>/dev/null && echo "tmux reloaded" || echo "tmux not running (ok)"
+  tmux source-file "$HOME/.tmux.conf" 2>/dev/null && echo "tmux を再読込しました" || echo "tmux は起動していません（問題なし）"
 fi
 
-echo "=== deploy done ==="
-echo "Open a new shell (or: source ~/.bashrc) to pick up bash changes."
-echo "Neovim plugins install on first launch (lazy.nvim)."
+echo "=== デプロイ完了 ==="
+echo "  bash  : source ~/.bashrc または新しいシェル"
+echo "  nvim  : ~/.config/nvim （初回起動でプラグイン導入）"

@@ -63,7 +63,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/maruchandev/env/main/setup.s
 | `.bashrc` | 対話シェル判定 + `bashrc.d/*.sh` を source |
 | `.profile` | ログインシェル / PATH / cargo |
 | `.tmux.conf` | `tmux/` モジュールを source-file |
-| `nvim/` | Neovim 設定（lazy.nvim + Lua 分割） |
+| `nvim/` | Neovim 設定一式 → `deploy` で `~/.config/nvim` に配置 |
 | `ssh_config` | → `~/.ssh/config`（サーバ用 Host のみ） |
 | `scripts/gh-publish.sh` | gh で create + push |
 | `starship.toml` | Starship |
