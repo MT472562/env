@@ -2,6 +2,7 @@
 set -uo pipefail
 
 TARGET="${1:-proxy.maruchan.dev}"
+IPERF_HOST="${IPERF_HOST:-iperf.maruchan.dev}"
 COUNT=10
 
 RESULTS=()
@@ -112,6 +113,15 @@ check_port 22    SSH
 check_port 80    HTTP
 check_port 443   HTTPS
 check_port 5001  iperf
+
+# iperf 専用ホストのポート確認
+if [ "$IPERF_HOST" != "$TARGET" ]; then
+  if timeout 3 bash -c "echo >/dev/tcp/$IPERF_HOST/5001" 2>/dev/null; then
+    PASS "Port 5001 ($IPERF_HOST): 疎通OK"
+  else
+    WARN "Port 5001 ($IPERF_HOST): 不通"
+  fi
+fi
 echo ""
 
 # ── 6. HTTP(S) 応答 ──
@@ -155,12 +165,12 @@ echo " [8] iperf 速度 (5秒)"
 echo "──────────────────────────────"
 if has iperf && has ssh; then
   SSH_USER="${2:-ubuntu}"
-  HOST_SSH="$SSH_USER@$TARGET"
+  HOST_SSH="$SSH_USER@$IPERF_HOST"
   cleanup() { ssh "$HOST_SSH" "pkill iperf 2>/dev/null; pkill iperf3 2>/dev/null" || true; }
   trap cleanup EXIT
   ssh "$HOST_SSH" "iperf -s >/dev/null 2>&1 &" 2>/dev/null || true
   sleep 0.5
-  iperf_out=$(iperf -c "$TARGET" -t 5 2>&1 || true)
+  iperf_out=$(iperf -c "$IPERF_HOST" -t 5 2>&1 || true)
   cleanup
   bw=$(echo "$iperf_out" | grep -oP '\d+\.?\d*(?= Mbits/sec)' | tail -1 || true)
   if [ -n "$bw" ]; then

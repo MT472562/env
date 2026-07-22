@@ -1,3 +1,2 @@
-export PATH="$HOME/.opencode/bin:$PATH"
-export BROWSER=wslview
-alias ae="docker exec -it atcoder-env bash -i"
+# opencode CLI (optional)
+[ -d "$HOME/.opencode/bin" ] && case ":$PATH:" in *:"$HOME/.opencode/bin":*) ;; *) PATH="$HOME/.opencode/bin:$PATH" ;; esac

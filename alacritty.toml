@@ -73,6 +73,11 @@ save_to_clipboard = true
 mouse = "Right"
 action = "Paste"
 
+[[mouse.bindings]]
+mouse = "Right"
+mods = "Shift"
+action = "Paste"
+
 
 
 

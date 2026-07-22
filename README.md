@@ -1,79 +1,136 @@
 # env
 
-設定ファイル管理リポジトリ。端末ごとの差分はモジュール単位で管理し、setup.sh でデプロイします。
+個人用ドットファイル。端末差分はモジュール単位で持ち、`setup.sh` / `deploy.sh` で展開する。
 
 ## クイックセットアップ
 
 ```bash
+# HTTPS (鍵がまだ無いマシン)
 bash <(curl -fsSL https://raw.githubusercontent.com/MT472562/env/main/setup.sh)
-```
 
-またはクローンして実行:
-```bash
+# または clone 後
 git clone git@github.com:MT472562/env.git ~/env
 cd ~/env && bash setup.sh
 ```
 
-設定だけ再適用（tmux・vim・shell も自動反映）:
+### よく使うオプション
+
+| コマンド | 意味 |
+|---|---|
+| `bash setup.sh` | パッケージ導入 + 設定配置 + SSH 対話 |
+| `bash setup.sh --deploy-only` | 設定ファイルだけ反映 |
+| `bash setup.sh --ssh-paste` | SSH 鍵の貼り付け / 生成だけ |
+| `bash setup.sh --no-ssh` | SSH 対話をスキップ |
+| `bash setup.sh --yes` | 非対話（SSH 貼り付けはスキップ） |
+| `bash deploy.sh` | 設定の再適用のみ（install なし） |
+
+### SSH 鍵をペーストする
+
 ```bash
-cd ~/env && bash deploy.sh
+bash setup.sh --ssh-paste
+# → 2) Paste private key
+# 鍵本文を貼り付け、最後に単独行で END
 ```
+
+対応:
+
+1. スキップ
+2. **秘密鍵をペースト**して `~/.ssh/<name>` に保存（権限 600）
+3. ed25519 を新規生成
+4. 既存ファイルから import
+5. 公開鍵一覧表示
+
+秘密鍵は **リポジトリに含めない**。`ssh_config` のパスだけ共有する。
 
 ## 構成
 
 ### ルート
 
-| ファイル | 説明 |
+| パス | 説明 |
 |---|---|
-| `.bashrc` | bashrc.d/*.sh を読み込むだけ |
-| `.tmux.conf` | tmux/ モジュールを source-file |
-| `.vimrc` | Vim: プラグイン、テーマ設定 |
-| `.profile` | ログインシェル設定 |
-| `cargo_env` | Rust/Cargo 環境変数（`~/.cargo/env`） |
-| `ssh_config` | SSH 接続設定（`~/.ssh/config`） |
-| `starship.toml` | Starship プロンプトテーマ |
-| `alacritty.toml` | Alacritty 設定（参考） |
-| `settings.json` | VSCode 設定（参考） |
+| `.bashrc` | 対話シェル判定 + `bashrc.d/*.sh` を source |
+| `.profile` | ログインシェル / PATH / cargo |
+| `.tmux.conf` | `tmux/` モジュールを source-file |
+| `nvim/` | Neovim 設定（lazy.nvim + Lua 分割） |
+| `ssh_config` | → `~/.ssh/config` |
+| `starship.toml` | Starship |
+| `setup.sh` | 初回ブートストラップ |
+| `deploy.sh` | 設定の再適用 |
 
-### bashrc.d/ (bash モジュール)
+### bashrc.d/
 
-| ファイル | 内容 | 有効化 |
-|---|---|---|
-| `00-base.sh` | 基本チェック、履歴、shopt | 常時 |
-| `10-aliases.sh` | エイリアス (eza/ls, grep) | 常時 |
-| `20-functions.sh` | cd() 自動ls, tmpl() | 常時 |
-| `30-completion.sh` | bash-completion | 常時 |
-| `40-nvm.sh` | NVM 読み込み | NVM 使用端末 |
-| `50-starship.sh` | Starship プロンプト | Starship 使用端末 |
-| `60-cargo.sh` | Cargo パス、Go パス | Rust/Go 使用端末 |
-| `70-opencode.sh` | opencode PATH、エイリアス | 端末固有 |
-| `80-local.sh` | ~/.bashrc.local があれば読む | 常時 |
+| ファイル | 内容 |
+|---|---|
+| `00-base.sh` | 履歴・shopt・truecolor |
+| `10-aliases.sh` | eza / ls / grep |
+| `20-functions.sh` | `cd` 自動 ls、`tmpl` |
+| `30-completion.sh` | bash-completion |
+| `40-nvm.sh` | NVM（あれば） |
+| `50-starship.sh` | Starship |
+| `60-cargo.sh` | cargo / go PATH（存在時のみ） |
+| `70-opencode.sh` | opencode PATH |
+| `72-editor.sh` | `vim` → nvim、EDITOR |
+| `73-grok.sh` | Grok CLI PATH / completion |
+| `75-atcoder.sh` | AtCoder 用 BROWSER / `ae` |
+| `80-local.sh` | `~/.bashrc.local` |
+| `90-tmux.sh` | default セッションへ auto-attach |
 
-不要なモジュールは削除するか、空ファイルで上書き:
+無効化例:
+
 ```bash
-# NVM 要らない場合
-echo -n > ~/.bashrc.d/40-nvm.sh
+# tmux 自動起動を止める
+touch ~/.no_tmux_auto
+# または
+export NO_TMUX_AUTO=1
 ```
 
-### tmux/ (tmux モジュール)
+端末固有の追加は `~/.bashrc.local` へ。
 
-| ファイル | 内容 | 有効化 |
-|---|---|---|
-| `00-base.conf` | mouse on、基本設定 | 常時 |
-| `10-theme.conf` | Tokyo Night テーマ、CPU/RAM 表示 | 常時 |
-| `20-keybinds.conf` | ペイン移動、リサイズ | 常時 |
-| `30-plugins.conf` | tpm、tmux-sensible、tmux-cpu | 常時 |
-| `40-copy-paste-wayland.conf` | wl-clipboard 連携コピペ | Wayland 端末のみ |
+### nvim/
 
-`.tmux.conf` でコメントアウト制御:
-```tmux
-source-file ~/.tmux/00-base.conf
-source-file ~/.tmux/10-theme.conf
-source-file ~/.tmux/20-keybinds.conf
-source-file ~/.tmux/30-plugins.conf
-# source-file ~/.tmux/40-copy-paste-wayland.conf  # ← Wayland端末で解除
+Vim / coc.nvim は使わない。設定はすべて Neovim:
+
+```
+nvim/
+  init.lua
+  lua/config/{options,keymaps,autocmds}.lua
+  lua/plugins/{ui,editor,lsp,completion,treesitter,writing}.lua
+  KEYMAPS.md
 ```
 
-## 端末ごとのカスタマイズ
+### tmux/
 
-tmux は `.tmux.conf` のコメントアウト、bash は `~/.bashrc.local` に書く、または `bashrc.d/` の該当ファイルを空にする、で対応します。
+| ファイル | 内容 |
+|---|---|
+| `00-base.conf` | mouse / 端末 |
+| `10-theme.conf` | Tokyo Night 風 status |
+| `20-keybinds.conf` | ペイン操作 |
+| `30-plugins.conf` | tpm |
+| `40-copy-paste-wayland.conf` | wl-clipboard（Wayland 時） |
+
+`.tmux.conf` で `source-file` のコメントを切り替えて端末差を吸収。
+
+### aerc
+
+`aerc/accounts.conf` は **gitignore**（アプリパスワード等）。  
+雛形は `aerc/accounts.conf.example`。
+
+## 整理済みの無駄
+
+- **`.vimrc` / vim-plug / coc** … Neovim へ移行済みのため削除
+- **モノリシック `nvim/init.lua`** … `lua/` 分割構成に置換
+- **WSL 固定** (`BROWSER=wslview` / docker `ae`) … ネイティブ Linux 向けに修正
+- **`.bashrc` への grok 直書き** … `73-grok.sh` モジュール化
+- **setup / deploy の二重コピー** … deploy に集約
+- **非対話シェルでもモジュール全部 source** … `.bashrc` 先頭で interactive 判定
+- **aerc 平文パスワードをリポジトリ管理** … example + gitignore
+
+## 更新フロー
+
+```bash
+# マシン上で調整したあと repo に取り込む例
+rsync -a ~/.config/nvim/ ~/env/nvim/
+rsync -a ~/.bashrc.d/ ~/env/bashrc.d/
+cd ~/env && git add -A && git status
+git commit -m "..." && git push
+```

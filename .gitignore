@@ -1,0 +1,13 @@
+# Secrets / machine-local
+aerc/accounts.conf
+*.pem
+*.key
+id_*
+!id_*.pub.example
+
+# Editor / OS junk
+.DS_Store
+*~
+*.swp
+*.swo
+.nvimlog

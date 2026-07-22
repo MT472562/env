@@ -1,0 +1,12 @@
+# Copy to accounts.conf and fill in credentials.
+# Prefer a secret store: source-cred-cmd = pass show aerc/account
+# Never commit real app passwords.
+
+[example]
+source = imaps://user%40example.com@imap.example.com:993
+outgoing = smtps://user%40example.com@smtp.example.com:465
+source-cred-cmd = echo YOUR_APP_PASSWORD
+outgoing-cred-cmd = echo YOUR_APP_PASSWORD
+default = INBOX
+from = Your Name <user@example.com>
+copy-to = Sent

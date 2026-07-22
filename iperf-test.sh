@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-HOST="${1:-proxy.maruchan.dev}"
+HOST="${1:-iperf.maruchan.dev}"
 DURATION="${2:-10}"
 BW="${3:-4M}"
 SSH_USER="${4:-ubuntu}"

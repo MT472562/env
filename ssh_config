@@ -1,7 +1,14 @@
-# 10.10.0.0/24 の範囲にマッチする設定
+# LAN hosts
 Match host 10.10.0.*
   User server
-  IdentityFile ~/.ssh/lan-ssh-key
+  IdentityFile ~/.ssh/lan.key
 
+# GitHub (adjust IdentityFile to the key you use)
+Host github.com
+  IdentityFile ~/.ssh/id_maruchan
+  IdentitiesOnly yes
+
+# Personal / cloud hosts
 Match host *.maruchan.dev,*.v4v6.net,*.sh3.uk
   IdentityFile ~/.ssh/oci.key
+  IdentityFile ~/.ssh/gcp.key
