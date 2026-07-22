@@ -397,7 +397,7 @@ install_packages() {
     curl -sS https://starship.rs/install.sh | sh -s -- -y
   fi
 
-  # GitHub CLI (prefer for all GitHub auth / push / clone)
+  # GitHub CLI (optional helper for PRs; primary auth is SSH)
   install_gh
 
   # Neovim (official appimage fallback if missing)
@@ -448,22 +448,20 @@ install_gh() {
     echo "installed $HOME/.local/bin/gh"
   fi
 
-  # One-time login if missing (interactive machines only)
+  # Optional: gh login (SSH is the primary GitHub auth path)
   if ! gh auth status >/dev/null 2>&1; then
     if [ "$ASSUME_YES" -eq 1 ] || [ ! -t 0 ]; then
-      echo "gh not logged in. Later: gh auth login && gh auth setup-git"
+      echo "gh not logged in (optional). Later: gh auth login"
     else
       echo
-      echo "=== GitHub CLI login (recommended) ==="
-      echo "  GitHub.com → HTTPS → Login with a web browser"
-      echo "  This makes git push/pull/clone Just Work."
-      read -r -p "Run gh auth login now? [Y/n] " ans
-      case "${ans:-Y}" in
-        n | N) echo "skip; run later: gh auth login" ;;
-        *)
+      echo "=== GitHub CLI (optional — SSH keys are primary) ==="
+      read -r -p "Also run gh auth login for PR/issue helpers? [y/N] " ans
+      case "${ans:-N}" in
+        y | Y)
           gh auth login
           gh auth setup-git
           ;;
+        *) echo "skip gh login" ;;
       esac
     fi
   else
@@ -494,8 +492,9 @@ echo "=== setup complete ==="
 echo "  bash configs : ~/.bashrc + ~/.bashrc.d/"
 echo "  neovim       : ~/.config/nvim  (first launch installs plugins)"
 echo "  tmux         : ~/.tmux.conf"
-echo "  ssh          : ~/.ssh/config (+ keys you installed)"
+echo "  ssh          : ~/.ssh/config + GitHub account keys"
 echo
 echo "Re-run anytime:"
-echo "  $ROOT/setup.sh --deploy-only"
-echo "  $ROOT/setup.sh --ssh-paste"
+echo "  $ROOT/setup.sh --deploy-only     # configs only"
+echo "  $ROOT/setup.sh --ssh-paste       # paste/generate GitHub keys again"
+echo "  $ROOT/scripts/ssh-github.sh status"
