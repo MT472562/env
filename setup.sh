@@ -93,27 +93,23 @@ write_key_file() {
   echo "wrote $dest (mode 600)"
 }
 
-ssh_paste_private_key() {
-  local name dest
-  echo
-  echo "Key file name under ~/.ssh/ (e.g. id_ed25519, id_github, oci.key)"
-  read -r -p "name [id_ed25519]: " name
-  name="${name:-id_ed25519}"
-  dest="$HOME/.ssh/$name"
-
-  if [ -e "$dest" ] && [ "$ASSUME_YES" -ne 1 ]; then
+# Paste private key into $1 (absolute path). Returns 0 on success.
+ssh_paste_into() {
+  local dest="$1" label="${2:-$1}" force="${3:-0}"
+  if [ -e "$dest" ] && [ "$force" -ne 1 ] && [ "$ASSUME_YES" -ne 1 ]; then
     read -r -p "$dest exists. overwrite? [y/N] " ans
-    case "$ans" in y | Y) ;; *) echo "skipped"; return 0 ;; esac
+    case "$ans" in y | Y) ;; *) echo "skipped $label"; return 0 ;; esac
   fi
 
   echo
-  echo "Paste the PRIVATE key now (including -----BEGIN ...----- lines)."
-  echo "When finished, type END on its own line and press Enter."
+  echo ">>> Paste PRIVATE key for: $label"
+  echo "    (include -----BEGIN ... PRIVATE KEY----- lines)"
+  echo "    When finished, type END on its own line and press Enter."
   echo "----"
   local content
   content="$(paste_multiline)"
   if [ -z "${content//[[:space:]]/}" ]; then
-    echo "empty paste — aborted" >&2
+    echo "empty paste — aborted ($label)" >&2
     return 1
   fi
   if ! printf '%s' "$content" | grep -q "BEGIN.*PRIVATE KEY"; then
@@ -125,26 +121,28 @@ ssh_paste_private_key() {
   fi
   write_key_file "$dest" "$content"
 
-  # Optional matching public key
-  if [ "$ASSUME_YES" -ne 1 ]; then
-    read -r -p "Also paste a public key (.pub)? [y/N] " ans
-    case "$ans" in
-      y | Y)
-        echo "Paste public key line(s), then END:"
-        local pub
-        pub="$(paste_multiline)"
-        if [ -n "${pub//[[:space:]]/}" ]; then
-          write_key_file "${dest}.pub" "$pub"
-          chmod 644 "${dest}.pub"
-        fi
-        ;;
-    esac
+  # Derive .pub if possible (ssh-keygen -y)
+  if command -v ssh-keygen >/dev/null 2>&1; then
+    if ssh-keygen -y -f "$dest" >"${dest}.pub" 2>/dev/null; then
+      chmod 644 "${dest}.pub"
+      echo "derived ${dest}.pub from private key"
+    fi
   fi
 
-  # ssh-add if agent available
   if command -v ssh-add >/dev/null 2>&1; then
     ssh-add "$dest" 2>/dev/null || true
   fi
+  return 0
+}
+
+ssh_paste_private_key() {
+  local name dest
+  echo
+  echo "Key file name under ~/.ssh/ (e.g. id_maruchan, id_mt472562, oci.key)"
+  read -r -p "name [id_ed25519]: " name
+  name="${name:-id_ed25519}"
+  dest="$HOME/.ssh/$name"
+  ssh_paste_into "$dest" "$name"
 }
 
 ssh_generate_key() {
@@ -184,6 +182,103 @@ ssh_import_file() {
   fi
 }
 
+# Guided install for one GitHub account key.
+# $1=account label  $2=key path basename (under ~/.ssh)
+ssh_setup_github_account() {
+  local label="$1" keyname="$2" dest host
+  dest="$HOME/.ssh/$keyname"
+  case "$label" in
+    maruchandev) host="github.com-maruchandev" ;;
+    mt472562) host="github.com-mt472562" ;;
+    *) host="github.com-$label" ;;
+  esac
+
+  echo
+  echo "────────────────────────────────────────"
+  echo " GitHub account: $label"
+  echo " Key file:       ~/.ssh/$keyname"
+  echo " SSH Host:       $host"
+  echo "────────────────────────────────────────"
+
+  if [ -f "$dest" ]; then
+    echo "Key already present."
+    if [ "$ASSUME_YES" -eq 1 ]; then
+      return 0
+    fi
+    # Quick auth check
+    if ssh -o BatchMode=yes -o ConnectTimeout=5 -T "git@$host" 2>&1 | grep -qi 'successfully authenticated'; then
+      echo "Auth OK — keeping existing key."
+      read -r -p "Replace with a pasted key anyway? [y/N] " ans
+      case "$ans" in y | Y) ;; *) return 0 ;; esac
+    else
+      echo "Auth not OK yet (key may be unregistered on GitHub)."
+      read -r -p "Replace key by pasting? [y/N] " ans
+      case "$ans" in y | Y) ;; *) return 0 ;; esac
+    fi
+  fi
+
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    # Non-interactive: generate only if missing
+    if [ ! -f "$dest" ]; then
+      ssh-keygen -t ed25519 -f "$dest" -C "${label}@github" -N ""
+      echo "generated $dest (register pubkey on GitHub)"
+    fi
+    return 0
+  fi
+
+  echo "How to install this account's key?"
+  echo "  1) Paste private key from another machine  (recommended for existing accounts)"
+  echo "  2) Generate a new key on this machine"
+  echo "  3) Skip this account"
+  read -r -p "choice [1]: " choice
+  choice="${choice:-1}"
+  case "$choice" in
+    1)
+      ssh_paste_into "$dest" "$label ($keyname)" 1 || return 1
+      ;;
+    2)
+      if [ -e "$dest" ]; then
+        read -r -p "overwrite $dest? [y/N] " ans
+        case "$ans" in y | Y) rm -f "$dest" "${dest}.pub" ;; *) return 0 ;; esac
+      fi
+      ssh-keygen -t ed25519 -f "$dest" -C "${label}@github"
+      chmod 600 "$dest"
+      [ -f "${dest}.pub" ] && chmod 644 "${dest}.pub"
+      ;;
+    3) echo "skipped $label"; return 0 ;;
+    *) echo "invalid"; return 1 ;;
+  esac
+
+  if [ -f "${dest}.pub" ]; then
+    echo
+    echo "Public key for $label — add at https://github.com/settings/keys"
+    echo "  (log in as $label first)"
+    echo "----"
+    cat "${dest}.pub"
+    echo "----"
+  fi
+
+  echo "Testing: ssh -T git@$host"
+  ssh -T "git@$host" 2>&1 || true
+}
+
+ssh_setup_optional_server_keys() {
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    return 0
+  fi
+  echo
+  read -r -p "Also paste server keys (LAN / OCI / GCP etc.)? [y/N] " ans
+  case "$ans" in y | Y) ;; *) return 0 ;; esac
+
+  local name
+  while true; do
+    echo
+    read -r -p "server key name under ~/.ssh (empty to finish) [e.g. lan.key, oci.key]: " name
+    [ -z "$name" ] && break
+    ssh_paste_into "$HOME/.ssh/$name" "$name" || true
+  done
+}
+
 setup_ssh_interactive() {
   mkdir -p "$HOME/.ssh"
   chmod 700 "$HOME/.ssh"
@@ -195,57 +290,72 @@ setup_ssh_interactive() {
     echo "installed ~/.ssh/config (GitHub multi-account Host aliases)"
   fi
 
-  # Ensure per-account keys exist (empty passphrase for workstation convenience)
-  if [ -x "$ROOT/scripts/ssh-github.sh" ]; then
-    bash "$ROOT/scripts/ssh-github.sh" gen maruchandev >/dev/null 2>&1 || true
-    bash "$ROOT/scripts/ssh-github.sh" gen mt472562 >/dev/null 2>&1 || true
+  echo
+  echo "╔══════════════════════════════════════════════════════════╗"
+  echo "║  SSH keys (required for multi-account GitHub)            ║"
+  echo "║  Paste keys from your password manager / old machine,    ║"
+  echo "║  or generate new ones and register the .pub on GitHub.   ║"
+  echo "╚══════════════════════════════════════════════════════════╝"
+
+  if [ "$ASSUME_YES" -eq 1 ]; then
+    echo "(--yes: generate missing GitHub keys only, no paste prompts)"
+    ssh_setup_github_account maruchandev id_maruchan
+    ssh_setup_github_account mt472562 id_mt472562
+  else
+    # Primary path: walk through each GitHub account and ask to paste
+    ssh_setup_github_account maruchandev id_maruchan
+    ssh_setup_github_account mt472562 id_mt472562
+    ssh_setup_optional_server_keys
+
+    # Extra freeform menu (optional)
+    while true; do
+      echo
+      echo "=== SSH extras (optional) ==="
+      echo "  1) Done"
+      echo "  2) Paste another private key (custom name)"
+      echo "  3) Generate another key"
+      echo "  4) Import key from file path"
+      echo "  5) Show all public keys"
+      echo "  6) GitHub multi-account status"
+      echo "  7) Re-run guided GitHub key setup"
+      read -r -p "choice [1]: " choice
+      choice="${choice:-1}"
+      case "$choice" in
+        1) break ;;
+        2) ssh_paste_private_key || true ;;
+        3) ssh_generate_key || true ;;
+        4) ssh_import_file || true ;;
+        5)
+          for p in "$HOME"/.ssh/*.pub; do
+            [ -f "$p" ] || continue
+            echo
+            echo "# $p"
+            cat "$p"
+          done
+          ;;
+        6)
+          if [ -x "$ROOT/scripts/ssh-github.sh" ]; then
+            bash "$ROOT/scripts/ssh-github.sh" status || true
+          fi
+          ;;
+        7)
+          ssh_setup_github_account maruchandev id_maruchan
+          ssh_setup_github_account mt472562 id_mt472562
+          ;;
+        *) echo "invalid" ;;
+      esac
+    done
   fi
 
-  while true; do
-    echo
-    echo "=== SSH key setup ==="
-    echo "  1) Skip / done"
-    echo "  2) Paste private key (clipboard → file)"
-    echo "  3) Generate new ed25519 key"
-    echo "  4) Import key from file path"
-    echo "  5) Show public keys"
-    echo "  6) GitHub multi-account status (ssh -T per Host)"
-    echo "  7) Print GitHub pubkeys to register"
-    if [ "$ASSUME_YES" -eq 1 ]; then
-      echo "(--yes: skipping SSH interactive)"
-      break
-    fi
-    read -r -p "choice [1]: " choice
-    choice="${choice:-1}"
-    case "$choice" in
-      1) break ;;
-      2) ssh_paste_private_key || true ;;
-      3) ssh_generate_key || true ;;
-      4) ssh_import_file || true ;;
-      5)
-        echo "--- ~/.ssh/*.pub ---"
-        ls -1 "$HOME"/.ssh/*.pub 2>/dev/null || echo "(none)"
-        for p in "$HOME"/.ssh/*.pub; do
-          [ -f "$p" ] || continue
-          echo
-          echo "# $p"
-          cat "$p"
-        done
-        ;;
-      6)
-        bash "$ROOT/scripts/ssh-github.sh" status || true
-        ;;
-      7)
-        echo "=== maruchandev (register on that account) ==="
-        bash "$ROOT/scripts/ssh-github.sh" pubkey maruchandev || true
-        echo "=== mt472562 (register on that account) ==="
-        bash "$ROOT/scripts/ssh-github.sh" pubkey mt472562 || true
-        echo
-        echo "Open: https://github.com/settings/keys  (switch account as needed)"
-        ;;
-      *) echo "invalid" ;;
-    esac
-  done
+  echo
+  echo "=== SSH summary ==="
+  if [ -x "$ROOT/scripts/ssh-github.sh" ]; then
+    bash "$ROOT/scripts/ssh-github.sh" status || true
+  fi
+  echo
+  echo "If auth failed: register the .pub on the matching GitHub account,"
+  echo "  then re-test:  bash $ROOT/scripts/ssh-github.sh status"
+  echo "  or re-run:     bash $ROOT/setup.sh --ssh-paste"
 }
 
 # ---------------------------------------------------------------------------

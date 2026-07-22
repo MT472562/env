@@ -57,11 +57,20 @@ cd ~/env && bash setup.sh
 | `bash scripts/ssh-github.sh status` | アカウント別 `ssh -T` |
 | `bash scripts/ssh-publish.sh …` | SSH で origin 設定 + push |
 
-### サーバ用 SSH 鍵（GitHub 以外）
+### setup.sh の鍵ウィザード
+
+`bash setup.sh` / `bash setup.sh --ssh-paste` は **最初に鍵貼り付けを聞く**:
+
+1. **maruchandev** → `~/.ssh/id_maruchan`（貼り付け / 新規生成 / スキップ）
+2. **mt472562** → `~/.ssh/id_mt472562`
+3. 任意で LAN / OCI などサーバ鍵も連続ペースト
+4. 最後に `ssh -T` でアカウント別の疎通確認
+
+貼り付け方: 秘密鍵をペースト → 単独行で `END`。  
+`.pub` は `ssh-keygen -y` で自動生成される。
 
 ```bash
-bash setup.sh --ssh-paste
-# → 2) Paste private key … 本文のあと単独行で END
+bash setup.sh --ssh-paste    # 鍵だけやり直す
 ```
 
 秘密鍵は **リポジトリに含めない**。`ssh_config` の Host 定義だけ共有する。
