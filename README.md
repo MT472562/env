@@ -2,57 +2,60 @@
 
 個人用ドットファイル。端末差分はモジュール単位で持ち、`setup.sh` / `deploy.sh` で展開する。
 
-## GitHub は全部 `gh` に任せる
+## GitHub = SSH 複数アカウント（Host 別名）
 
-SSH 鍵の組み合わせ・deploy key・remote URL の迷路に入らない。
+アカウントごとに **鍵を分け**、`~/.ssh/config` の **Host 別名**で取り違えを防ぐ。
+
+| アカウント | Host 別名 | 鍵 |
+|---|---|---|
+| maruchandev | `github.com-maruchandev` | `~/.ssh/id_maruchan` |
+| MT472562 | `github.com-mt472562` | `~/.ssh/id_mt472562` |
 
 ```bash
-# 1回だけ（ブラウザでログイン）
-gh auth login          # GitHub.com → HTTPS → Login with a web browser
-gh auth setup-git      # git の credential を gh に接続
+# 状態確認（誰として認証されるか）
+bash scripts/ssh-github.sh status
 
-# 以後
-gh repo clone owner/env ~/env
-cd ~/env && bash setup.sh --deploy-only
+# 公開鍵を各アカウントに登録（Settings → SSH and GPG keys）
+bash scripts/ssh-github.sh pubkey maruchandev
+bash scripts/ssh-github.sh pubkey mt472562
+# → https://github.com/settings/keys
 
-# 初回 publish / push（このリポジトリ自身）
-bash scripts/gh-publish.sh              # 非公開で create + push
-bash scripts/gh-publish.sh --repo maruchandev/env
+# clone（URL の Host がアカウントを決める）
+git clone git@github.com-maruchandev:maruchandev/env.git
+git clone git@github.com-mt472562:MT472562/env.git
+
+# この repo の origin 付け替え
+bash scripts/ssh-github.sh remote maruchandev maruchandev/env
+bash scripts/ssh-github.sh remote mt472562 MT472562/env
+
+# publish / push
+bash scripts/ssh-publish.sh maruchandev maruchandev/env
 ```
 
-| やりたいこと | コマンド |
-|---|---|
-| ログイン | `gh auth login` |
-| clone | `gh repo clone owner/env` |
-| push | `git push`（setup-git 済みならそのまま） |
-| 新規作成して push | `bash scripts/gh-publish.sh` |
-| PR / issue | `gh pr create` / `gh issue list` |
-| 誰で入ってるか | `gh auth status` |
+**ルール:** remote に素の `git@github.com:...` を書かない。必ず `github.com-<account>` を使う。
 
-サーバ用 SSH 鍵（LAN / OCI 等）はこれまでどおり `setup.sh --ssh-paste`。  
-**GitHub 用だけは `gh` に寄せる**のが幸せ。
+LAN / OCI など **サーバ用鍵**は `setup.sh --ssh-paste`。  
+`gh` は PR/issue 用の補助（`scripts/gh-publish.sh`）として残してある。
 
 ## クイックセットアップ
 
 ```bash
-# 鍵と Host 別名が済んでいるマシン
 git clone git@github.com-maruchandev:maruchandev/env.git ~/env
 cd ~/env && bash setup.sh
-
-# 生の curl bootstrap（公開 repo のとき）
-bash <(curl -fsSL https://raw.githubusercontent.com/maruchandev/env/main/setup.sh)
 ```
+
 ### よく使うオプション
 
 | コマンド | 意味 |
 |---|---|
-| `bash setup.sh` | パッケージ + gh + 設定 + （任意）SSH |
+| `bash setup.sh` | パッケージ + 設定 + SSH 対話 |
 | `bash setup.sh --deploy-only` | 設定ファイルだけ反映 |
-| `bash setup.sh --ssh-paste` | サーバ用 SSH 鍵の貼り付け / 生成 |
+| `bash setup.sh --ssh-paste` | 鍵ペースト / 生成 / multi-account 確認 |
 | `bash setup.sh --no-ssh` | SSH 対話をスキップ |
-| `bash setup.sh --yes` | 非対話（gh login / SSH 貼り付けはスキップ） |
+| `bash setup.sh --yes` | 非対話 |
 | `bash deploy.sh` | 設定の再適用のみ |
-| `bash scripts/gh-publish.sh` | `gh` で remote 作成 + push |
+| `bash scripts/ssh-github.sh status` | アカウント別 `ssh -T` |
+| `bash scripts/ssh-publish.sh …` | SSH で origin 設定 + push |
 
 ### サーバ用 SSH 鍵（GitHub 以外）
 
@@ -61,7 +64,8 @@ bash setup.sh --ssh-paste
 # → 2) Paste private key … 本文のあと単独行で END
 ```
 
-秘密鍵は **リポジトリに含めない**。`ssh_config` のホスト定義だけ共有する。
+秘密鍵は **リポジトリに含めない**。`ssh_config` の Host 定義だけ共有する。
+
 ## 構成
 
 ### ルート
@@ -91,6 +95,7 @@ bash setup.sh --ssh-paste
 | `50-starship.sh` | Starship |
 | `60-cargo.sh` | cargo / go PATH（存在時のみ） |
 | `70-opencode.sh` | opencode PATH |
+| `71-gh.sh` | gh PATH / completion（任意） |
 | `72-editor.sh` | `vim` → nvim、EDITOR |
 | `73-grok.sh` | Grok CLI PATH / completion |
 | `75-atcoder.sh` | AtCoder 用 BROWSER / `ae` |
@@ -100,7 +105,6 @@ bash setup.sh --ssh-paste
 無効化例:
 
 ```bash
-# tmux 自動起動を止める
 touch ~/.no_tmux_auto
 # または
 export NO_TMUX_AUTO=1
@@ -146,11 +150,11 @@ nvim/
 - **setup / deploy の二重コピー** … deploy に集約
 - **非対話シェルでもモジュール全部 source** … `.bashrc` 先頭で interactive 判定
 - **aerc 平文パスワードをリポジトリ管理** … example + gitignore
+- **素の `github.com` に全アカウントの鍵を載せる** … Host 別名で分離
 
 ## 更新フロー
 
 ```bash
-# マシン上で調整したあと repo に取り込む例
 rsync -a ~/.config/nvim/ ~/env/nvim/
 rsync -a ~/.bashrc.d/ ~/env/bashrc.d/
 cd ~/env && git add -A && git status
