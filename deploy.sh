@@ -69,6 +69,20 @@ mkdir -p "$HOME/.config"
 # --- Neovim ---
 deploy_nvim
 
+# --- fish（任意・対話用。無い場合はスキップ）---
+if [ -d "$ROOT/fish" ]; then
+  mkdir -p "$HOME/.config/fish"
+  if [ -f "$ROOT/fish/config.fish" ]; then
+    copy_file "$ROOT/fish/config.fish" "$HOME/.config/fish/config.fish"
+  fi
+  # completions など追加ファイルがあればコピー（上書き）
+  if [ -d "$ROOT/fish/completions" ]; then
+    mkdir -p "$HOME/.config/fish/completions"
+    cp -v "$ROOT/fish/completions/"* "$HOME/.config/fish/completions/" 2>/dev/null || true
+  fi
+  echo "fish 設定: env/fish → ~/.config/fish （試す: fish）"
+fi
+
 # aerc: 既存の accounts.conf は上書きしない（秘密情報が入っているため）
 mkdir -p "$HOME/.config/aerc"
 for f in "$ROOT"/aerc/*; do

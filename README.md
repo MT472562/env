@@ -8,6 +8,19 @@
 |---|---|
 | **GitHub**（clone / push / PR / 複数アカウント） | **`gh` に統一** |
 | **サーバ**（LAN / OCI / GCP 等） | **SSH 鍵の貼り付け**（`setup.sh`） |
+| **対話シェル** | デフォルト **bash**。**fish は任意**（`fish` で起動、`exit` で戻る） |
+
+### fish を試す
+
+```bash
+# 入っていれば
+fish
+
+# このマシンでは ~/.local/bin/fish（sudo 不要で入れた場合）
+# 設定: env/fish/config.fish → ~/.config/fish/config.fish
+# bash に戻る: exit
+# ログインシェルは変えないのが安全（変えるなら chsh の前に十分試す）
+```
 
 ```bash
 # GitHub
