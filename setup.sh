@@ -8,9 +8,15 @@
 #   bash setup.sh --yes            # non-interactive defaults (skip SSH paste)
 set -euo pipefail
 
-# Prefer gh-managed HTTPS. Override with ENV_REPO=owner/name if needed.
-ENV_REPO="${ENV_REPO:-MT472562/env}"
-REPO_URL_SSH="git@github.com:${ENV_REPO}.git"
+# Prefer SSH Host alias (multi-account). Override as needed:
+#   ENV_ACCOUNT=maruchandev|mt472562  ENV_REPO=owner/name
+ENV_ACCOUNT="${ENV_ACCOUNT:-maruchandev}"
+ENV_REPO="${ENV_REPO:-maruchandev/env}"
+case "$ENV_ACCOUNT" in
+  mt472562 | mt) ENV_SSH_HOST="github.com-mt472562" ;;
+  *) ENV_SSH_HOST="github.com-maruchandev" ;;
+esac
+REPO_URL_SSH="git@${ENV_SSH_HOST}:${ENV_REPO}.git"
 REPO_URL_HTTPS="https://github.com/${ENV_REPO}.git"
 REPO_DIR="${REPO_DIR:-$HOME/env}"
 
@@ -48,14 +54,14 @@ else
       git -C "$REPO_DIR" pull --ff-only || true
     fi
   else
-    # gh clone uses logged-in credentials (happiest path)
-    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+    # Prefer SSH Host alias (multi-account keys); fall back to gh / HTTPS
+    if git clone "$REPO_URL_SSH" "$REPO_DIR" 2>/dev/null; then
+      :
+    elif command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
       gh auth setup-git 2>/dev/null || true
       gh repo clone "$ENV_REPO" "$REPO_DIR"
-    elif git clone "$REPO_URL_HTTPS" "$REPO_DIR" 2>/dev/null; then
-      :
     else
-      git clone "$REPO_URL_SSH" "$REPO_DIR"
+      git clone "$REPO_URL_HTTPS" "$REPO_DIR"
     fi
   fi
   ROOT="$REPO_DIR"
@@ -182,11 +188,17 @@ setup_ssh_interactive() {
   mkdir -p "$HOME/.ssh"
   chmod 700 "$HOME/.ssh"
 
-  # Ensure config from repo if missing
-  if [ ! -f "$HOME/.ssh/config" ] && [ -f "$ROOT/ssh_config" ]; then
+  # Always deploy multi-account GitHub Host aliases from repo
+  if [ -f "$ROOT/ssh_config" ]; then
     cp "$ROOT/ssh_config" "$HOME/.ssh/config"
     chmod 600 "$HOME/.ssh/config"
-    echo "installed ~/.ssh/config from repo"
+    echo "installed ~/.ssh/config (GitHub multi-account Host aliases)"
+  fi
+
+  # Ensure per-account keys exist (empty passphrase for workstation convenience)
+  if [ -x "$ROOT/scripts/ssh-github.sh" ]; then
+    bash "$ROOT/scripts/ssh-github.sh" gen maruchandev >/dev/null 2>&1 || true
+    bash "$ROOT/scripts/ssh-github.sh" gen mt472562 >/dev/null 2>&1 || true
   fi
 
   while true; do
@@ -197,6 +209,8 @@ setup_ssh_interactive() {
     echo "  3) Generate new ed25519 key"
     echo "  4) Import key from file path"
     echo "  5) Show public keys"
+    echo "  6) GitHub multi-account status (ssh -T per Host)"
+    echo "  7) Print GitHub pubkeys to register"
     if [ "$ASSUME_YES" -eq 1 ]; then
       echo "(--yes: skipping SSH interactive)"
       break
@@ -217,6 +231,17 @@ setup_ssh_interactive() {
           echo "# $p"
           cat "$p"
         done
+        ;;
+      6)
+        bash "$ROOT/scripts/ssh-github.sh" status || true
+        ;;
+      7)
+        echo "=== maruchandev (register on that account) ==="
+        bash "$ROOT/scripts/ssh-github.sh" pubkey maruchandev || true
+        echo "=== mt472562 (register on that account) ==="
+        bash "$ROOT/scripts/ssh-github.sh" pubkey mt472562 || true
+        echo
+        echo "Open: https://github.com/settings/keys  (switch account as needed)"
         ;;
       *) echo "invalid" ;;
     esac

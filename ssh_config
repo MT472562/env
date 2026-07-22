@@ -1,14 +1,51 @@
-# LAN hosts
+# =============================================================================
+# SSH config (deployed to ~/.ssh/config)
+# =============================================================================
+# Multiple GitHub accounts: use Host aliases (NOT plain github.com in remotes).
+#
+#   git@github.com-maruchandev:maruchandev/repo.git
+#   git@github.com-mt472562:MT472562/repo.git
+#
+# Test:
+#   ssh -T git@github.com-maruchandev
+#   ssh -T git@github.com-mt472562
+#
+# Helpers: bash ~/env/scripts/ssh-github.sh status|use|remote|...
+# =============================================================================
+
+# --- GitHub: maruchandev (personal) ---
+Host github.com-maruchandev
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_maruchan
+  IdentitiesOnly yes
+  AddKeysToAgent yes
+
+# --- GitHub: MT472562 ---
+Host github.com-mt472562
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_mt472562
+  IdentitiesOnly yes
+  AddKeysToAgent yes
+
+# Default github.com → personal (maruchandev)
+# Prefer alias Host in remotes so the account is always explicit.
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ~/.ssh/id_maruchan
+  IdentitiesOnly yes
+  AddKeysToAgent yes
+
+# --- LAN ---
 Match host 10.10.0.*
   User server
   IdentityFile ~/.ssh/lan.key
-
-# GitHub (adjust IdentityFile to the key you use)
-Host github.com
-  IdentityFile ~/.ssh/id_maruchan
   IdentitiesOnly yes
 
-# Personal / cloud hosts
+# --- Cloud / personal hosts ---
 Match host *.maruchan.dev,*.v4v6.net,*.sh3.uk
   IdentityFile ~/.ssh/oci.key
   IdentityFile ~/.ssh/gcp.key
+  IdentitiesOnly yes

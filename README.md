@@ -35,15 +35,13 @@ bash scripts/gh-publish.sh --repo maruchandev/env
 ## クイックセットアップ
 
 ```bash
-# gh 済みマシン
-gh repo clone MT472562/env ~/env   # または maruchandev/env
+# 鍵と Host 別名が済んでいるマシン
+git clone git@github.com-maruchandev:maruchandev/env.git ~/env
 cd ~/env && bash setup.sh
 
-# まだ gh が無い / 鍵が無い
-bash <(curl -fsSL https://raw.githubusercontent.com/MT472562/env/main/setup.sh)
-# setup 中に gh を入れて auth login を促す
+# 生の curl bootstrap（公開 repo のとき）
+bash <(curl -fsSL https://raw.githubusercontent.com/maruchandev/env/main/setup.sh)
 ```
-
 ### よく使うオプション
 
 | コマンド | 意味 |
@@ -74,7 +72,9 @@ bash setup.sh --ssh-paste
 | `.profile` | ログインシェル / PATH / cargo |
 | `.tmux.conf` | `tmux/` モジュールを source-file |
 | `nvim/` | Neovim 設定（lazy.nvim + Lua 分割） |
-| `ssh_config` | → `~/.ssh/config` |
+| `ssh_config` | → `~/.ssh/config`（GitHub Host 別名 + LAN/cloud） |
+| `scripts/ssh-github.sh` | 複数アカウント status / remote / pubkey |
+| `scripts/ssh-publish.sh` | SSH で push |
 | `starship.toml` | Starship |
 | `setup.sh` | 初回ブートストラップ |
 | `deploy.sh` | 設定の再適用 |
