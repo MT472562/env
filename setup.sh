@@ -262,6 +262,9 @@ install_packages() {
     curl -sS https://starship.rs/install.sh | sh -s -- -y
   fi
 
+  # GitHub CLI (prefer for all GitHub auth / push / clone)
+  install_gh
+
   # Neovim (official appimage fallback if missing)
   if ! command -v nvim >/dev/null 2>&1; then
     echo "--- neovim ---"
@@ -280,6 +283,57 @@ install_packages() {
   fi
 
   echo "Font (optional): PlemolJP Console NF — https://github.com/yuru7/PlemolJP/releases"
+}
+
+install_gh() {
+  if command -v gh >/dev/null 2>&1; then
+    echo "--- gh already installed: $(gh --version | head -1) ---"
+  else
+    echo "--- gh (GitHub CLI) ---"
+    mkdir -p "$HOME/.local/bin"
+    local ver arch gh_arch url tmp
+    arch="$(uname -m)"
+    case "$arch" in
+      x86_64) gh_arch=amd64 ;;
+      aarch64 | arm64) gh_arch=arm64 ;;
+      *) echo "unsupported arch for gh: $arch" >&2; return 0 ;;
+    esac
+    ver="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | sed -n 's/.*"tag_name": "\(v[^"]*\)".*/\1/p' | head -1)"
+    if [ -z "$ver" ]; then
+      echo "could not resolve gh version" >&2
+      return 0
+    fi
+    url="https://github.com/cli/cli/releases/download/${ver}/gh_${ver#v}_linux_${gh_arch}.tar.gz"
+    tmp="$(mktemp -d)"
+    curl -fsSL "$url" -o "$tmp/gh.tgz"
+    tar -xzf "$tmp/gh.tgz" -C "$tmp"
+    install -m 755 "$tmp/gh_${ver#v}_linux_${gh_arch}/bin/gh" "$HOME/.local/bin/gh"
+    rm -rf "$tmp"
+    export PATH="$HOME/.local/bin:$PATH"
+    echo "installed $HOME/.local/bin/gh"
+  fi
+
+  # One-time login if missing (interactive machines only)
+  if ! gh auth status >/dev/null 2>&1; then
+    if [ "$ASSUME_YES" -eq 1 ] || [ ! -t 0 ]; then
+      echo "gh not logged in. Later: gh auth login && gh auth setup-git"
+    else
+      echo
+      echo "=== GitHub CLI login (recommended) ==="
+      echo "  GitHub.com → HTTPS → Login with a web browser"
+      echo "  This makes git push/pull/clone Just Work."
+      read -r -p "Run gh auth login now? [Y/n] " ans
+      case "${ans:-Y}" in
+        n | N) echo "skip; run later: gh auth login" ;;
+        *)
+          gh auth login
+          gh auth setup-git
+          ;;
+      esac
+    fi
+  else
+    gh auth setup-git 2>/dev/null || true
+  fi
 }
 
 # ---------------------------------------------------------------------------
