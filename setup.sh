@@ -8,8 +8,10 @@
 #   bash setup.sh --yes            # non-interactive defaults (skip SSH paste)
 set -euo pipefail
 
-REPO_URL_SSH="git@github.com:MT472562/env.git"
-REPO_URL_HTTPS="https://github.com/MT472562/env.git"
+# Prefer gh-managed HTTPS. Override with ENV_REPO=owner/name if needed.
+ENV_REPO="${ENV_REPO:-MT472562/env}"
+REPO_URL_SSH="git@github.com:${ENV_REPO}.git"
+REPO_URL_HTTPS="https://github.com/${ENV_REPO}.git"
 REPO_DIR="${REPO_DIR:-$HOME/env}"
 
 DEPLOY_ONLY=0
@@ -39,18 +41,27 @@ if [ -f "$SCRIPT_DIR/deploy.sh" ] && [ -d "$SCRIPT_DIR/bashrc.d" ]; then
 else
   echo "--- cloning env repo → $REPO_DIR ---"
   if [ -d "$REPO_DIR/.git" ]; then
-    git -C "$REPO_DIR" pull --ff-only || true
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+      gh auth setup-git 2>/dev/null || true
+      git -C "$REPO_DIR" pull --ff-only || true
+    else
+      git -C "$REPO_DIR" pull --ff-only || true
+    fi
   else
-    if git clone "$REPO_URL_SSH" "$REPO_DIR" 2>/dev/null; then
+    # gh clone uses logged-in credentials (happiest path)
+    if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
+      gh auth setup-git 2>/dev/null || true
+      gh repo clone "$ENV_REPO" "$REPO_DIR"
+    elif git clone "$REPO_URL_HTTPS" "$REPO_DIR" 2>/dev/null; then
       :
     else
-      git clone "$REPO_URL_HTTPS" "$REPO_DIR"
+      git clone "$REPO_URL_SSH" "$REPO_DIR"
     fi
   fi
   ROOT="$REPO_DIR"
 fi
 cd "$ROOT"
-chmod +x "$ROOT/setup.sh" "$ROOT/deploy.sh" 2>/dev/null || true
+chmod +x "$ROOT/setup.sh" "$ROOT/deploy.sh" "$ROOT/scripts/"*.sh 2>/dev/null || true
 
 # ---------------------------------------------------------------------------
 # SSH helpers

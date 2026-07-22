@@ -2,46 +2,68 @@
 
 個人用ドットファイル。端末差分はモジュール単位で持ち、`setup.sh` / `deploy.sh` で展開する。
 
+## GitHub は全部 `gh` に任せる
+
+SSH 鍵の組み合わせ・deploy key・remote URL の迷路に入らない。
+
+```bash
+# 1回だけ（ブラウザでログイン）
+gh auth login          # GitHub.com → HTTPS → Login with a web browser
+gh auth setup-git      # git の credential を gh に接続
+
+# 以後
+gh repo clone owner/env ~/env
+cd ~/env && bash setup.sh --deploy-only
+
+# 初回 publish / push（このリポジトリ自身）
+bash scripts/gh-publish.sh              # 非公開で create + push
+bash scripts/gh-publish.sh --repo maruchandev/env
+```
+
+| やりたいこと | コマンド |
+|---|---|
+| ログイン | `gh auth login` |
+| clone | `gh repo clone owner/env` |
+| push | `git push`（setup-git 済みならそのまま） |
+| 新規作成して push | `bash scripts/gh-publish.sh` |
+| PR / issue | `gh pr create` / `gh issue list` |
+| 誰で入ってるか | `gh auth status` |
+
+サーバ用 SSH 鍵（LAN / OCI 等）はこれまでどおり `setup.sh --ssh-paste`。  
+**GitHub 用だけは `gh` に寄せる**のが幸せ。
+
 ## クイックセットアップ
 
 ```bash
-# HTTPS (鍵がまだ無いマシン)
-bash <(curl -fsSL https://raw.githubusercontent.com/MT472562/env/main/setup.sh)
-
-# または clone 後
-git clone git@github.com:MT472562/env.git ~/env
+# gh 済みマシン
+gh repo clone MT472562/env ~/env   # または maruchandev/env
 cd ~/env && bash setup.sh
+
+# まだ gh が無い / 鍵が無い
+bash <(curl -fsSL https://raw.githubusercontent.com/MT472562/env/main/setup.sh)
+# setup 中に gh を入れて auth login を促す
 ```
 
 ### よく使うオプション
 
 | コマンド | 意味 |
 |---|---|
-| `bash setup.sh` | パッケージ導入 + 設定配置 + SSH 対話 |
+| `bash setup.sh` | パッケージ + gh + 設定 + （任意）SSH |
 | `bash setup.sh --deploy-only` | 設定ファイルだけ反映 |
-| `bash setup.sh --ssh-paste` | SSH 鍵の貼り付け / 生成だけ |
+| `bash setup.sh --ssh-paste` | サーバ用 SSH 鍵の貼り付け / 生成 |
 | `bash setup.sh --no-ssh` | SSH 対話をスキップ |
-| `bash setup.sh --yes` | 非対話（SSH 貼り付けはスキップ） |
-| `bash deploy.sh` | 設定の再適用のみ（install なし） |
+| `bash setup.sh --yes` | 非対話（gh login / SSH 貼り付けはスキップ） |
+| `bash deploy.sh` | 設定の再適用のみ |
+| `bash scripts/gh-publish.sh` | `gh` で remote 作成 + push |
 
-### SSH 鍵をペーストする
+### サーバ用 SSH 鍵（GitHub 以外）
 
 ```bash
 bash setup.sh --ssh-paste
-# → 2) Paste private key
-# 鍵本文を貼り付け、最後に単独行で END
+# → 2) Paste private key … 本文のあと単独行で END
 ```
 
-対応:
-
-1. スキップ
-2. **秘密鍵をペースト**して `~/.ssh/<name>` に保存（権限 600）
-3. ed25519 を新規生成
-4. 既存ファイルから import
-5. 公開鍵一覧表示
-
-秘密鍵は **リポジトリに含めない**。`ssh_config` のパスだけ共有する。
-
+秘密鍵は **リポジトリに含めない**。`ssh_config` のホスト定義だけ共有する。
 ## 構成
 
 ### ルート
