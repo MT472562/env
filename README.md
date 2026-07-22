@@ -2,78 +2,57 @@
 
 個人用ドットファイル。端末差分はモジュール単位で持ち、`setup.sh` / `deploy.sh` で展開する。
 
-## GitHub = SSH 複数アカウント（Host 別名）
+## 役割分担
 
-アカウントごとに **鍵を分け**、`~/.ssh/config` の **Host 別名**で取り違えを防ぐ。
-
-| アカウント | Host 別名 | 鍵 |
-|---|---|---|
-| maruchandev | `github.com-maruchandev` | `~/.ssh/id_maruchan` |
-| MT472562 | `github.com-mt472562` | `~/.ssh/id_mt472562` |
+| 用途 | 手段 |
+|---|---|
+| **GitHub**（clone / push / PR / 複数アカウント） | **`gh` に統一** |
+| **サーバ**（LAN / OCI / GCP 等） | **SSH 鍵の貼り付け**（`setup.sh`） |
 
 ```bash
-# 状態確認（誰として認証されるか）
-bash scripts/ssh-github.sh status
+# GitHub
+gh auth login              # ブラウザでログイン（HTTPS 推奨）
+gh auth setup-git          # git の認証を gh に接続
+gh auth status
+gh auth switch             # 複数アカウント切替
+gh repo clone owner/env ~/env
+bash scripts/gh-publish.sh # この repo を create + push
 
-# 公開鍵を各アカウントに登録（Settings → SSH and GPG keys）
-bash scripts/ssh-github.sh pubkey maruchandev
-bash scripts/ssh-github.sh pubkey mt472562
-# → https://github.com/settings/keys
-
-# clone（URL の Host がアカウントを決める）
-git clone git@github.com-maruchandev:maruchandev/env.git
-git clone git@github.com-mt472562:MT472562/env.git
-
-# この repo の origin 付け替え
-bash scripts/ssh-github.sh remote maruchandev maruchandev/env
-bash scripts/ssh-github.sh remote mt472562 MT472562/env
-
-# publish / push
-bash scripts/ssh-publish.sh maruchandev maruchandev/env
+# サーバ用 SSH 鍵だけやり直す
+bash setup.sh --ssh-paste
+# → lan.key / oci.key / gcp.key などを貼り付け（単独行 END で確定）
 ```
-
-**ルール:** remote に素の `git@github.com:...` を書かない。必ず `github.com-<account>` を使う。
-
-LAN / OCI など **サーバ用鍵**は `setup.sh --ssh-paste`。  
-`gh` は PR/issue 用の補助（`scripts/gh-publish.sh`）として残してある。
 
 ## クイックセットアップ
 
 ```bash
-git clone git@github.com-maruchandev:maruchandev/env.git ~/env
+# gh ログイン済みなら
+gh repo clone maruchandev/env ~/env
 cd ~/env && bash setup.sh
+
+# または
+bash <(curl -fsSL https://raw.githubusercontent.com/maruchandev/env/main/setup.sh)
 ```
+
+`setup.sh` の流れ（日本語プロンプト）:
+
+1. パッケージ導入 + **gh インストール / ログイン**
+2. `deploy.sh` で設定配置
+3. **サーバ用 SSH 鍵**の貼り付け（GitHub 鍵は聞かない）
 
 ### よく使うオプション
 
 | コマンド | 意味 |
 |---|---|
-| `bash setup.sh` | パッケージ + 設定 + SSH 対話 |
-| `bash setup.sh --deploy-only` | 設定ファイルだけ反映 |
-| `bash setup.sh --ssh-paste` | 鍵ペースト / 生成 / multi-account 確認 |
-| `bash setup.sh --no-ssh` | SSH 対話をスキップ |
+| `bash setup.sh` | パッケージ + gh + 設定 + サーバ鍵 |
+| `bash setup.sh --deploy-only` | 設定ファイルだけ |
+| `bash setup.sh --ssh-paste` | サーバ鍵の貼り付けのみ |
+| `bash setup.sh --no-ssh` | サーバ鍵ウィザードをスキップ |
 | `bash setup.sh --yes` | 非対話 |
 | `bash deploy.sh` | 設定の再適用のみ |
-| `bash scripts/ssh-github.sh status` | アカウント別 `ssh -T` |
-| `bash scripts/ssh-publish.sh …` | SSH で origin 設定 + push |
+| `bash scripts/gh-publish.sh` | gh で remote 作成 + push |
 
-### setup.sh の鍵ウィザード
-
-`bash setup.sh` / `bash setup.sh --ssh-paste` は **最初に鍵貼り付けを聞く**:
-
-1. **maruchandev** → `~/.ssh/id_maruchan`（貼り付け / 新規生成 / スキップ）
-2. **mt472562** → `~/.ssh/id_mt472562`
-3. 任意で LAN / OCI などサーバ鍵も連続ペースト
-4. 最後に `ssh -T` でアカウント別の疎通確認
-
-貼り付け方: 秘密鍵をペースト → 単独行で `END`。  
-`.pub` は `ssh-keygen -y` で自動生成される。
-
-```bash
-bash setup.sh --ssh-paste    # 鍵だけやり直す
-```
-
-秘密鍵は **リポジトリに含めない**。`ssh_config` の Host 定義だけ共有する。
+秘密鍵は **リポジトリに含めない**。`ssh_config` には Host / IdentityFile のパスだけ。
 
 ## 構成
 
@@ -85,9 +64,8 @@ bash setup.sh --ssh-paste    # 鍵だけやり直す
 | `.profile` | ログインシェル / PATH / cargo |
 | `.tmux.conf` | `tmux/` モジュールを source-file |
 | `nvim/` | Neovim 設定（lazy.nvim + Lua 分割） |
-| `ssh_config` | → `~/.ssh/config`（GitHub Host 別名 + LAN/cloud） |
-| `scripts/ssh-github.sh` | 複数アカウント status / remote / pubkey |
-| `scripts/ssh-publish.sh` | SSH で push |
+| `ssh_config` | → `~/.ssh/config`（サーバ用 Host のみ） |
+| `scripts/gh-publish.sh` | gh で create + push |
 | `starship.toml` | Starship |
 | `setup.sh` | 初回ブートストラップ |
 | `deploy.sh` | 設定の再適用 |
@@ -159,7 +137,7 @@ nvim/
 - **setup / deploy の二重コピー** … deploy に集約
 - **非対話シェルでもモジュール全部 source** … `.bashrc` 先頭で interactive 判定
 - **aerc 平文パスワードをリポジトリ管理** … example + gitignore
-- **素の `github.com` に全アカウントの鍵を載せる** … Host 別名で分離
+- **GitHub を SSH 鍵で複数アカウント管理** … `gh auth login` / `switch` に統一
 
 ## 更新フロー
 
