@@ -75,12 +75,25 @@ if [ -d "$ROOT/fish" ]; then
   if [ -f "$ROOT/fish/config.fish" ]; then
     copy_file "$ROOT/fish/config.fish" "$HOME/.config/fish/config.fish"
   fi
-  # completions など追加ファイルがあればコピー（上書き）
   if [ -d "$ROOT/fish/completions" ]; then
     mkdir -p "$HOME/.config/fish/completions"
     cp -v "$ROOT/fish/completions/"* "$HOME/.config/fish/completions/" 2>/dev/null || true
   fi
-  echo "fish 設定: env/fish → ~/.config/fish （試す: fish）"
+  echo "fish 設定: env/fish → ~/.config/fish （試す: fish-try）"
+fi
+
+# --- fzf シェルスクリプト ---
+if [ -d "$ROOT/fzf" ]; then
+  mkdir -p "$HOME/.local/share"
+  for f in fzf-key-bindings.bash fzf-completion.bash; do
+    if [ -f "$ROOT/fzf/$f" ]; then
+      copy_file "$ROOT/fzf/$f" "$HOME/.local/share/$f"
+    fi
+  done
+  # バイナリが無ければ案内のみ（setup で入れる想定）
+  if ! command -v fzf >/dev/null 2>&1; then
+    echo "注意: fzf コマンドが PATH にありません（~/.local/bin/fzf を推奨）"
+  fi
 fi
 
 # aerc: 既存の accounts.conf は上書きしない（秘密情報が入っているため）

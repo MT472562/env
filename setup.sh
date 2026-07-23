@@ -337,6 +337,9 @@ install_packages() {
   # GitHub は gh に統一
   install_gh
 
+  # fzf（bash あいまい補完・履歴検索）
+  install_fzf
+
   # Neovim 本体（設定ファイルは deploy.sh が ~/.config/nvim へ配置）
   if ! command -v nvim >/dev/null 2>&1; then
     echo "--- Neovim 本体をインストール ---"
@@ -360,6 +363,47 @@ install_packages() {
   fi
 
   echo "フォント（任意）: PlemolJP Console NF — https://github.com/yuru7/PlemolJP/releases"
+}
+
+install_fzf() {
+  export PATH="$HOME/.local/bin:$PATH"
+  mkdir -p "$HOME/.local/bin" "$HOME/.local/share"
+
+  # シェル連携スクリプトは repo 同梱を優先
+  if [ -d "$ROOT/fzf" ]; then
+    for f in fzf-key-bindings.bash fzf-completion.bash; do
+      [ -f "$ROOT/fzf/$f" ] && cp -f "$ROOT/fzf/$f" "$HOME/.local/share/$f"
+    done
+  fi
+
+  if command -v fzf >/dev/null 2>&1; then
+    echo "--- fzf は利用可能: $(fzf --version | head -1) ---"
+    return 0
+  fi
+
+  echo "--- fzf を ~/.local/bin にインストール ---"
+  local ver tmp url
+  ver="$(curl -fsSL https://api.github.com/repos/junegunn/fzf/releases/latest | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -1)"
+  if [ -z "$ver" ]; then
+    echo "fzf のバージョン取得に失敗（後で手動インストール可）" >&2
+    return 0
+  fi
+  tmp="$(mktemp -d)"
+  url="https://github.com/junegunn/fzf/releases/download/${ver}/fzf-${ver#v}-linux_amd64.tar.gz"
+  if curl -fsSL "$url" -o "$tmp/fzf.tgz" && tar -xzf "$tmp/fzf.tgz" -C "$tmp"; then
+    install -m 755 "$tmp/fzf" "$HOME/.local/bin/fzf"
+    echo "インストール完了: $HOME/.local/bin/fzf ($ver)"
+    # スクリプトが repo に無いとき upstream から
+    if [ ! -f "$HOME/.local/share/fzf-key-bindings.bash" ]; then
+      curl -fsSL "https://raw.githubusercontent.com/junegunn/fzf/${ver}/shell/key-bindings.bash" \
+        -o "$HOME/.local/share/fzf-key-bindings.bash" || true
+      curl -fsSL "https://raw.githubusercontent.com/junegunn/fzf/${ver}/shell/completion.bash" \
+        -o "$HOME/.local/share/fzf-completion.bash" || true
+    fi
+  else
+    echo "fzf のダウンロードに失敗しました" >&2
+  fi
+  rm -rf "$tmp"
 }
 
 install_gh() {

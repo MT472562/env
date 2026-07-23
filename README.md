@@ -87,20 +87,34 @@ bash <(curl -fsSL https://raw.githubusercontent.com/maruchandev/env/main/setup.s
 
 | ファイル | 内容 |
 |---|---|
-| `00-base.sh` | 履歴・shopt・truecolor |
+| `00-base.sh` | 履歴（厚め）・shopt・truecolor |
 | `10-aliases.sh` | eza / ls / grep |
 | `20-functions.sh` | `cd` 自動 ls、`tmpl` |
-| `30-completion.sh` | bash-completion |
+| `30-completion.sh` | bash-completion + Tab メニュー補完強化 |
+| `31-fzf.sh` | fzf（Ctrl-R 履歴 / Ctrl-T ファイル / \*\*Tab） |
+| `32-tool-completions.sh` | gh / rustup / npm / ssh など |
 | `40-nvm.sh` | NVM（あれば） |
 | `50-starship.sh` | Starship |
 | `60-cargo.sh` | cargo / go PATH（存在時のみ） |
 | `70-opencode.sh` | opencode PATH |
-| `71-gh.sh` | gh PATH / completion（任意） |
+| `71-gh.sh` | gh PATH |
 | `72-editor.sh` | `vim` → nvim、EDITOR |
 | `73-grok.sh` | Grok CLI PATH / completion |
 | `75-atcoder.sh` | AtCoder 用 BROWSER / `ae` |
 | `80-local.sh` | `~/.bashrc.local` |
 | `90-tmux.sh` | default セッションへ auto-attach |
+
+**bash 補完の使い方（強化後）**
+
+| キー | 動作 |
+|------|------|
+| `Tab` | 候補を順送り（menu-complete） |
+| `Shift-Tab` | 候補を戻る |
+| `↑` / `↓` | 今の入力に前方一致する履歴 |
+| `Ctrl-R` | fzf で履歴あいまい検索 |
+| `Ctrl-T` | fzf でファイル挿入 |
+| `Alt-C` | fzf でディレクトリへ cd |
+| `cd **` + `Tab` | あいまいパス補完 |
 
 無効化例:
 
