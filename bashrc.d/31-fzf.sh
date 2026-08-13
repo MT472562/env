@@ -1,19 +1,24 @@
-# fzf: あいまい補完・履歴・ファイル検索
+# fzf: 環境変数（検索コマンド・表示・プレビュー）
+#   キーバインド / **<Tab> 補完の読み込みは 55-ble.sh が ble 有無で切替
 #   Ctrl-R  コマンド履歴
 #   Ctrl-T  ファイル挿入
 #   Alt-C   ディレクトリへ cd
 #   **<Tab> あいまいパス補完
+#
+#   注意: Debian/Ubuntu のパッケージ名は fdfind。存在しない `fd` を先に
+#   command -v すると、WSL+Windows PATH 時に 9p を全走査して遅くなる。
 
 command -v fzf >/dev/null 2>&1 || return 0 2>/dev/null || true
 
-if command -v fd >/dev/null 2>&1; then
-  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
-  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-  export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
-elif command -v fdfind >/dev/null 2>&1; then
+# fd 系（パッケージ名優先 → 本家名）
+if command -v fdfind >/dev/null 2>&1; then
   export FZF_DEFAULT_COMMAND='fdfind --type f --hidden --follow --exclude .git'
   export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
   export FZF_ALT_C_COMMAND='fdfind --type d --hidden --follow --exclude .git'
+elif command -v fd >/dev/null 2>&1; then
+  export FZF_DEFAULT_COMMAND='fd --type f --hidden --follow --exclude .git'
+  export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+  export FZF_ALT_C_COMMAND='fd --type d --hidden --follow --exclude .git'
 elif command -v rg >/dev/null 2>&1; then
   export FZF_DEFAULT_COMMAND='rg --files --hidden --glob "!.git"'
   export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
@@ -31,19 +36,3 @@ if command -v eza >/dev/null 2>&1; then
 else
   export FZF_ALT_C_OPTS="--preview 'ls -la {}'"
 fi
-
-# 公式スクリプト（優先: ~/.local/share → ~/env/fzf）
-_fzf_dir=""
-if [ -f "$HOME/.local/share/fzf-key-bindings.bash" ]; then
-  _fzf_dir="$HOME/.local/share"
-elif [ -f "$HOME/env/fzf/fzf-key-bindings.bash" ]; then
-  _fzf_dir="$HOME/env/fzf"
-fi
-
-if [ -n "$_fzf_dir" ]; then
-  # shellcheck disable=SC1091
-  [ -f "$_fzf_dir/fzf-key-bindings.bash" ] && . "$_fzf_dir/fzf-key-bindings.bash"
-  # shellcheck disable=SC1091
-  [ -f "$_fzf_dir/fzf-completion.bash" ] && . "$_fzf_dir/fzf-completion.bash"
-fi
-unset _fzf_dir

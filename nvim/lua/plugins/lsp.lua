@@ -132,6 +132,7 @@ return {
         typescriptreact = { "prettierd", "prettier", stop_after_first = true },
         json = { "prettierd", "prettier", stop_after_first = true },
         yaml = { "prettierd", "prettier", stop_after_first = true },
+        -- markdown: 手動フォーマットのみ（保存のたびに折り返しが変わると書きづらい）
         markdown = { "prettierd", "prettier", stop_after_first = true },
         html = { "prettierd", "prettier", stop_after_first = true },
         css = { "prettierd", "prettier", stop_after_first = true },
@@ -144,6 +145,12 @@ return {
         local max = 512 * 1024
         local ok, stats = pcall(vim.uv.fs_stat, vim.api.nvim_buf_get_name(bufnr))
         if ok and stats and stats.size > max then
+          return nil
+        end
+        -- Markdown は執筆中のレイアウトを壊さないよう保存時フォーマットしない
+        -- 必要なら <leader>cf で手動実行
+        local ft = vim.bo[bufnr].filetype
+        if ft == "markdown" or ft == "markdown.mdx" then
           return nil
         end
         return { timeout_ms = 1500, lsp_fallback = true }

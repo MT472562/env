@@ -69,27 +69,14 @@ mkdir -p "$HOME/.config"
 # --- Neovim ---
 deploy_nvim
 
-# --- fish（任意・対話用。無い場合はスキップ）---
-if [ -d "$ROOT/fish" ]; then
-  mkdir -p "$HOME/.config/fish"
-  if [ -f "$ROOT/fish/config.fish" ]; then
-    copy_file "$ROOT/fish/config.fish" "$HOME/.config/fish/config.fish"
-  fi
-  if [ -d "$ROOT/fish/completions" ]; then
-    mkdir -p "$HOME/.config/fish/completions"
-    cp -v "$ROOT/fish/completions/"* "$HOME/.config/fish/completions/" 2>/dev/null || true
-  fi
-  echo "fish 設定: env/fish → ~/.config/fish （試す: fish-try）"
-fi
-
-# --- fzf シェルスクリプト ---
+# --- fzf シェルスクリプト（ble.sh 無し環境のフォールバック用） ---
+# 現代の fzf（>=0.48）は eval "$(fzf --bash)" を使うため、これは旧 fzf 向け。
+# ble.sh の contrib 統合が期待する名前（key-bindings.bash / completion.bash）に揃える。
+rm -f "$HOME/.local/share/fzf-key-bindings.bash" "$HOME/.local/share/fzf-completion.bash" 2>/dev/null || true
 if [ -d "$ROOT/fzf" ]; then
-  mkdir -p "$HOME/.local/share"
-  for f in fzf-key-bindings.bash fzf-completion.bash; do
-    if [ -f "$ROOT/fzf/$f" ]; then
-      copy_file "$ROOT/fzf/$f" "$HOME/.local/share/$f"
-    fi
-  done
+  mkdir -p "$HOME/.local/share/fzf"
+  cp -v "$ROOT"/fzf/fzf-key-bindings.bash "$HOME/.local/share/fzf/key-bindings.bash" 2>/dev/null || true
+  cp -v "$ROOT"/fzf/fzf-completion.bash "$HOME/.local/share/fzf/completion.bash" 2>/dev/null || true
   # バイナリが無ければ案内のみ（setup で入れる想定）
   if ! command -v fzf >/dev/null 2>&1; then
     echo "注意: fzf コマンドが PATH にありません（~/.local/bin/fzf を推奨）"
@@ -112,18 +99,8 @@ if [ ! -f "$HOME/.config/aerc/accounts.conf" ] && [ -f "$ROOT/aerc/accounts.conf
   copy_file "$ROOT/aerc/accounts.conf.example" "$HOME/.config/aerc/accounts.conf.example"
 fi
 
-# SSH config（鍵本体は含めない）
-mkdir -p "$HOME/.ssh"
-chmod 700 "$HOME/.ssh"
-if [ -f "$ROOT/ssh_config" ]; then
-  copy_file "$ROOT/ssh_config" "$HOME/.ssh/config"
-  chmod 600 "$HOME/.ssh/config"
-fi
-
-if [ -f "$ROOT/cargo_env" ] && [ ! -f "$HOME/.cargo/env" ]; then
-  mkdir -p "$HOME/.cargo"
-  copy_file "$ROOT/cargo_env" "$HOME/.cargo/env"
-fi
+# SSH config（鍵本体・既存の端末固有設定は上書きしない）
+bash "$ROOT/scripts/deploy-ssh-config.sh"
 
 # 空の古い .vimrc は削除
 if [ -f "$HOME/.vimrc" ] && [ ! -s "$HOME/.vimrc" ]; then

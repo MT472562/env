@@ -59,10 +59,21 @@ autocmd("FileType", {
   callback = function()
     vim.opt_local.wrap = true
     vim.opt_local.linebreak = true
+    vim.opt_local.breakindent = true
     vim.opt_local.spell = false -- enable with <leader>us if needed
-    vim.opt_local.conceallevel = 2
+    -- 執筆中は生の Markdown を見せる（conceal すると ** や []() が消えて書きづらい）
+    vim.opt_local.conceallevel = 0
+    vim.opt_local.concealcursor = ""
     vim.opt_local.number = true
     vim.opt_local.relativenumber = false
+    -- リスト・引用の継続を楽に
+    if vim.bo.filetype == "markdown" then
+      vim.opt_local.comments = "b:*,b:-,b:+,n:>"
+      vim.opt_local.formatoptions:append("ro")
+      vim.opt_local.formatlistpat = [[^\s*\d\+\.\s\+\|^\s*[-*+]\s\+]]
+      -- WSL+IME: 記号は打たず Space m* で入れる
+      require("config.markdown_jp").setup_buffer()
+    end
     -- j/k move by display line when wrap is on
     vim.keymap.set({ "n", "v" }, "j", "gj", { buffer = true, silent = true })
     vim.keymap.set({ "n", "v" }, "k", "gk", { buffer = true, silent = true })

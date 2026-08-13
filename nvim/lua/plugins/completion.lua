@@ -18,6 +18,8 @@ return {
         dependencies = { "rafamadriz/friendly-snippets" },
         config = function()
           require("luasnip.loaders.from_vscode").lazy_load()
+          -- WSL+日本語 IME 向け Markdown スニペット
+          require("config.markdown_jp").setup_snippets()
         end,
       },
     },

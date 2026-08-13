@@ -14,6 +14,3 @@ fi
 if [ -d "$HOME/.local/bin" ]; then
   PATH="$HOME/.local/bin:$PATH"
 fi
-
-# Rust (idempotent; bashrc.d/60-cargo.sh also sources this for non-login shells)
-[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"

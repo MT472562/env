@@ -7,6 +7,7 @@
 #   bash setup.sh --ssh-paste      # サーバ用 SSH 鍵の貼り付けだけ
 #   bash setup.sh --no-ssh         # サーバ鍵ウィザードをスキップ
 #   bash setup.sh --yes            # 非対話（鍵貼り付け・gh ログインをスキップ）
+#   bash setup.sh --profile wsl     # 環境プロファイルを明示
 #
 # 方針:
 #   - GitHub … すべて gh（ログイン・clone・push の認証）
@@ -14,7 +15,7 @@
 set -euo pipefail
 
 # クローン先・リポジトリ（ENV_REPO=owner/name で上書き可）
-ENV_REPO="${ENV_REPO:-maruchandev/env}"
+ENV_REPO="${ENV_REPO:-MT472562/env}"
 REPO_URL_HTTPS="https://github.com/${ENV_REPO}.git"
 REPO_DIR="${REPO_DIR:-$HOME/env}"
 
@@ -22,13 +23,25 @@ DEPLOY_ONLY=0
 SSH_ONLY=0
 DO_SSH=1
 ASSUME_YES=0
+PROFILE="${ENV_PROFILE:-auto}"
+PROFILE_EXPLICIT=0
 
-for arg in "$@"; do
-  case "$arg" in
+while [ "$#" -gt 0 ]; do
+  case "$1" in
     --deploy-only) DEPLOY_ONLY=1 ;;
     --ssh-paste | --ssh-only) SSH_ONLY=1 ;;
     --no-ssh) DO_SSH=0 ;;
     --yes | -y) ASSUME_YES=1 ;;
+    --profile)
+      [ "$#" -ge 2 ] || { echo "--profile には値が必要です" >&2; exit 2; }
+      PROFILE="$2"
+      PROFILE_EXPLICIT=1
+      shift
+      ;;
+    --profile=*)
+      PROFILE="${1#*=}"
+      PROFILE_EXPLICIT=1
+      ;;
     -h | --help)
       cat <<'EOF'
 env セットアップ
@@ -38,13 +51,97 @@ env セットアップ
   bash setup.sh --ssh-paste      サーバ用 SSH 鍵の貼り付けのみ
   bash setup.sh --no-ssh         サーバ鍵ウィザードをスキップ
   bash setup.sh --yes            非対話モード
+  bash setup.sh --profile NAME   環境を指定（wsl / macos / linux-desktop / linux-server）
 
 GitHub は gh に統一。SSH 鍵ペーストはサーバ（LAN/OCI 等）用のみ。
 EOF
       exit 0
       ;;
+    *) echo "不明なオプション: $1" >&2; exit 2 ;;
   esac
+  shift
 done
+
+detect_profile() {
+  case "$(uname -s 2>/dev/null || true)" in
+    Darwin) echo macos; return ;;
+    Linux)
+      if [ -n "${WSL_DISTRO_NAME:-}${WSL_INTEROP:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+        echo wsl
+      elif [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+        echo linux-desktop
+      else
+        echo linux-server
+      fi
+      return
+      ;;
+  esac
+  echo unknown
+}
+
+normalize_profile() {
+  case "$1" in
+    auto) echo auto ;;
+    wsl | WSL) echo wsl ;;
+    mac | macos | darwin | Mac | macOS) echo macos ;;
+    desktop | linux-desktop | LinuxDesktop) echo linux-desktop ;;
+    server | linux-server | ubuntu-server | UbuntuServer) echo linux-server ;;
+    *) return 1 ;;
+  esac
+}
+
+select_profile() {
+  local detected normalized choice selected
+  detected="$(detect_profile)"
+  normalized="$(normalize_profile "$PROFILE" 2>/dev/null)" || {
+    echo "不明なプロファイル: $PROFILE" >&2
+    echo "指定可能: wsl / macos / linux-desktop / linux-server" >&2
+    exit 2
+  }
+
+  if [ "$normalized" != auto ]; then
+    PROFILE="$normalized"
+  elif [ "$ASSUME_YES" -eq 1 ] || [ ! -t 0 ]; then
+    PROFILE="$detected"
+  else
+    echo
+    echo "=== 環境プロファイル ==="
+    echo "  1) WSL             Windows上の開発環境"
+    echo "  2) macOS           Intel / Apple Silicon"
+    echo "  3) Linux Desktop   GUI付きLinux"
+    echo "  4) Linux Server    SSH中心のヘッドレス環境"
+    case "$detected" in
+      wsl) choice=1 ;; macos) choice=2 ;; linux-desktop) choice=3 ;; *) choice=4 ;;
+    esac
+    read -r -p "選択 [$choice]（自動判定: $detected）: " selected
+    selected="${selected:-$choice}"
+    case "$selected" in
+      1 | wsl) PROFILE=wsl ;;
+      2 | macos | mac) PROFILE=macos ;;
+      3 | linux-desktop | desktop) PROFILE=linux-desktop ;;
+      4 | linux-server | server) PROFILE=linux-server ;;
+      *) echo "無効な選択です: $selected" >&2; exit 2 ;;
+    esac
+  fi
+
+  if [ "$PROFILE" = unknown ]; then
+    echo "このOSは自動判定できません。--profile で指定してください" >&2
+    exit 2
+  fi
+  export ENV_PROFILE="$PROFILE"
+  echo "環境プロファイル: $PROFILE"
+}
+
+if [ "$SSH_ONLY" -eq 1 ] || [ "$DEPLOY_ONLY" -eq 1 ]; then
+  if [ "$PROFILE_EXPLICIT" -eq 1 ]; then
+    PROFILE="$(normalize_profile "$PROFILE" 2>/dev/null)" || { echo "不明なプロファイル: $PROFILE" >&2; exit 2; }
+  else
+    PROFILE="$(detect_profile)"
+  fi
+  export ENV_PROFILE="$PROFILE"
+else
+  select_profile
+fi
 
 # ---------------------------------------------------------------------------
 # リポジトリの場所を決める
@@ -234,12 +331,8 @@ setup_ssh_interactive() {
   mkdir -p "$HOME/.ssh"
   chmod 700 "$HOME/.ssh"
 
-  # ssh_config（Host 定義のみ。秘密鍵は含めない）
-  if [ -f "$ROOT/ssh_config" ]; then
-    cp "$ROOT/ssh_config" "$HOME/.ssh/config"
-    chmod 600 "$HOME/.ssh/config"
-    echo "ssh_config を配置しました → ~/.ssh/config"
-  fi
+  # 管理設定は config.d に分離し、既存の端末固有設定を保持する。
+  bash "$ROOT/scripts/deploy-ssh-config.sh"
 
   echo
   echo "╔════════════════════════════════════════════════════════╗"
@@ -304,11 +397,29 @@ setup_ssh_interactive() {
 install_packages() {
   echo "=== パッケージ ==="
   if command -v apt-get >/dev/null 2>&1; then
-    sudo apt-get update -y
-    sudo apt-get install -y \
-      curl git tmux eza ripgrep fd-find xclip wl-clipboard \
-      build-essential unzip 2>/dev/null || \
-      sudo apt-get install -y curl git tmux eza build-essential
+    local -a privilege base_packages desktop_packages
+    if [ "$(id -u)" -eq 0 ]; then privilege=(); else privilege=(sudo); fi
+    base_packages=(curl git tmux ripgrep fd-find build-essential gawk make unzip rsync)
+    desktop_packages=()
+    case "$PROFILE" in
+      wsl | linux-desktop) desktop_packages=(xclip wl-clipboard) ;;
+    esac
+    "${privilege[@]}" apt-get update -y
+    "${privilege[@]}" apt-get install -y "${base_packages[@]}"
+    if [ ${#desktop_packages[@]} -gt 0 ]; then
+      "${privilege[@]}" apt-get install -y "${desktop_packages[@]}" 2>/dev/null || \
+        echo "注意: GUIクリップボードツールの一部を導入できませんでした" >&2
+    fi
+    # eza は古いUbuntuに無いことがあるため任意扱い。
+    "${privilege[@]}" apt-get install -y eza 2>/dev/null || true
+  elif [ "$PROFILE" = macos ]; then
+    if ! command -v brew >/dev/null 2>&1; then
+      echo "Homebrew がありません。先に https://brew.sh/ の手順で導入してください" >&2
+      return 1
+    fi
+    brew install bash git gh tmux neovim ripgrep fd fzf eza gawk coreutils rsync
+  else
+    echo "対応パッケージマネージャがありません。必要コマンドを手動で導入します" >&2
   fi
 
   if [ ! -d "$HOME/.nvm" ]; then
@@ -340,11 +451,18 @@ install_packages() {
   # fzf（bash あいまい補完・履歴検索）
   install_fzf
 
+  # ble.sh（fish 風ラインエディタ・自動サジェスト）
+  install_ble
+
   # Neovim 本体（設定ファイルは deploy.sh が ~/.config/nvim へ配置）
   if ! command -v nvim >/dev/null 2>&1; then
     echo "--- Neovim 本体をインストール ---"
     if command -v apt-get >/dev/null 2>&1; then
-      sudo apt-get install -y neovim || true
+      if [ "$(id -u)" -eq 0 ]; then
+        apt-get install -y neovim || true
+      else
+        sudo apt-get install -y neovim || true
+      fi
     fi
     if ! command -v nvim >/dev/null 2>&1; then
       echo "nvim が見つかりません。"
@@ -365,15 +483,35 @@ install_packages() {
   echo "フォント（任意）: PlemolJP Console NF — https://github.com/yuru7/PlemolJP/releases"
 }
 
+install_ble() {
+  if [ -f "$HOME/.local/share/blesh/out/ble.sh" ]; then
+    echo "--- ble.sh はインストール済み: $(grep -o 'version [0-9.]*' "$HOME/.local/share/blesh/out/ble.sh" | head -1) ---"
+    return 0
+  fi
+
+  if ! command -v make >/dev/null 2>&1 || ! command -v gawk >/dev/null 2>&1; then
+    echo "注意: ble.sh のビルドには make + gawk が必要です（スキップ）" >&2
+    return 0
+  fi
+
+  echo "--- ble.sh（fish 風ラインエディタ）を ~/.local/share/blesh にインストール ---"
+  git clone --recursive --depth 1 https://github.com/akinomyoga/ble.sh.git "$HOME/.local/share/blesh"
+  make -C "$HOME/.local/share/blesh" || {
+    echo "ble.sh のビルドに失敗しました" >&2
+    return 1
+  }
+  echo "ble.sh をインストールしました"
+}
+
 install_fzf() {
   export PATH="$HOME/.local/bin:$PATH"
   mkdir -p "$HOME/.local/bin" "$HOME/.local/share"
 
-  # シェル連携スクリプトは repo 同梱を優先
+  # シェル連携スクリプトは repo 同梱を優先（旧 fzf / ble 無し環境のフォールバック用）
   if [ -d "$ROOT/fzf" ]; then
-    for f in fzf-key-bindings.bash fzf-completion.bash; do
-      [ -f "$ROOT/fzf/$f" ] && cp -f "$ROOT/fzf/$f" "$HOME/.local/share/$f"
-    done
+    mkdir -p "$HOME/.local/share/fzf"
+    cp -f "$ROOT/fzf/fzf-key-bindings.bash" "$HOME/.local/share/fzf/key-bindings.bash"
+    cp -f "$ROOT/fzf/fzf-completion.bash" "$HOME/.local/share/fzf/completion.bash"
   fi
 
   if command -v fzf >/dev/null 2>&1; then
@@ -382,23 +520,26 @@ install_fzf() {
   fi
 
   echo "--- fzf を ~/.local/bin にインストール ---"
-  local ver tmp url
+  local ver tmp url os arch
   ver="$(curl -fsSL https://api.github.com/repos/junegunn/fzf/releases/latest | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p' | head -1)"
   if [ -z "$ver" ]; then
     echo "fzf のバージョン取得に失敗（後で手動インストール可）" >&2
     return 0
   fi
+  case "$(uname -s)" in Linux) os=linux ;; Darwin) os=darwin ;; *) echo "fzf: 未対応OS" >&2; return 0 ;; esac
+  case "$(uname -m)" in x86_64 | amd64) arch=amd64 ;; aarch64 | arm64) arch=arm64 ;; *) echo "fzf: 未対応CPU" >&2; return 0 ;; esac
   tmp="$(mktemp -d)"
-  url="https://github.com/junegunn/fzf/releases/download/${ver}/fzf-${ver#v}-linux_amd64.tar.gz"
+  url="https://github.com/junegunn/fzf/releases/download/${ver}/fzf-${ver#v}-${os}_${arch}.tar.gz"
   if curl -fsSL "$url" -o "$tmp/fzf.tgz" && tar -xzf "$tmp/fzf.tgz" -C "$tmp"; then
     install -m 755 "$tmp/fzf" "$HOME/.local/bin/fzf"
     echo "インストール完了: $HOME/.local/bin/fzf ($ver)"
-    # スクリプトが repo に無いとき upstream から
-    if [ ! -f "$HOME/.local/share/fzf-key-bindings.bash" ]; then
+    # スクリプトが repo に無いとき upstream から（旧 fzf / ble 無し環境のフォールバック用）
+    if [ ! -f "$HOME/.local/share/fzf/key-bindings.bash" ]; then
+      mkdir -p "$HOME/.local/share/fzf"
       curl -fsSL "https://raw.githubusercontent.com/junegunn/fzf/${ver}/shell/key-bindings.bash" \
-        -o "$HOME/.local/share/fzf-key-bindings.bash" || true
+        -o "$HOME/.local/share/fzf/key-bindings.bash" || true
       curl -fsSL "https://raw.githubusercontent.com/junegunn/fzf/${ver}/shell/completion.bash" \
-        -o "$HOME/.local/share/fzf-completion.bash" || true
+        -o "$HOME/.local/share/fzf/completion.bash" || true
     fi
   else
     echo "fzf のダウンロードに失敗しました" >&2
@@ -414,7 +555,7 @@ install_gh() {
   else
     echo "--- GitHub CLI (gh) をインストール ---"
     mkdir -p "$HOME/.local/bin"
-    local ver arch gh_arch url tmp
+    local ver arch gh_arch gh_os url tmp archive_dir
     arch="$(uname -m)"
     case "$arch" in
       x86_64) gh_arch=amd64 ;;
@@ -424,16 +565,22 @@ install_gh() {
         return 0
         ;;
     esac
+    case "$(uname -s)" in
+      Linux) gh_os=linux ;;
+      Darwin) gh_os=macOS ;;
+      *) echo "gh: 未対応OS" >&2; return 0 ;;
+    esac
     ver="$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest | sed -n 's/.*"tag_name": "\(v[^"]*\)".*/\1/p' | head -1)"
     if [ -z "$ver" ]; then
       echo "gh のバージョン取得に失敗しました" >&2
       return 0
     fi
-    url="https://github.com/cli/cli/releases/download/${ver}/gh_${ver#v}_linux_${gh_arch}.tar.gz"
+    archive_dir="gh_${ver#v}_${gh_os}_${gh_arch}"
+    url="https://github.com/cli/cli/releases/download/${ver}/${archive_dir}.tar.gz"
     tmp="$(mktemp -d)"
     curl -fsSL "$url" -o "$tmp/gh.tgz"
     tar -xzf "$tmp/gh.tgz" -C "$tmp"
-    install -m 755 "$tmp/gh_${ver#v}_linux_${gh_arch}/bin/gh" "$HOME/.local/bin/gh"
+    install -m 755 "$tmp/$archive_dir/bin/gh" "$HOME/.local/bin/gh"
     rm -rf "$tmp"
     export PATH="$HOME/.local/bin:$PATH"
     echo "インストール完了: $HOME/.local/bin/gh"
@@ -497,6 +644,7 @@ fi
 
 echo
 echo "=== セットアップ完了 ==="
+echo "  profile  : $PROFILE"
 echo "  bash     : ~/.bashrc + ~/.bashrc.d/"
 echo "  neovim   : env/nvim → ~/.config/nvim"
 echo "             （init.lua / lua/config / lua/plugins）"

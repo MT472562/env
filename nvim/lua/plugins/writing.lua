@@ -3,7 +3,7 @@
 -- ============================================================================
 
 return {
-  -- Pretty Markdown inside the editor
+  -- Pretty Markdown inside the editor（既定オフ。読むときだけ <leader>mr）
   {
     "MeanderingProgrammer/render-markdown.nvim",
     ft = { "markdown" },
@@ -12,11 +12,26 @@ return {
       "nvim-tree/nvim-web-devicons",
     },
     opts = {
+      -- 書きながら見た目変換されるとカーソル位置がズレて辛い → 明示トグルのみ
+      enabled = false,
+      -- 万一有効にしても Insert 中は生テキスト
+      render_modes = { "n", "c", "t" },
       heading = { enabled = true, sign = false },
       code = { enabled = true, sign = false, width = "block" },
       bullet = { enabled = true },
       checkbox = { enabled = true },
     },
+    config = function(_, opts)
+      require("render-markdown").setup(opts)
+      vim.api.nvim_create_autocmd("FileType", {
+        pattern = "markdown",
+        callback = function()
+          vim.keymap.set("n", "<leader>mr", function()
+            require("render-markdown").toggle()
+          end, { buffer = true, desc = "Toggle markdown render" })
+        end,
+      })
+    end,
   },
 
   -- Browser preview (Ctrl-p in markdown)
@@ -42,10 +57,6 @@ return {
             buffer = true,
             desc = "Markdown browser preview",
           })
-          -- Toggle in-editor render
-          vim.keymap.set("n", "<leader>mr", function()
-            require("render-markdown").toggle()
-          end, { buffer = true, desc = "Toggle markdown render" })
         end,
       })
     end,

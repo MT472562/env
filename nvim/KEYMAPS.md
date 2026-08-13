@@ -52,15 +52,53 @@ Leader = **Space**
 | `Space gb` | blame |
 | `Space gs` | git status |
 
-## メモ・Markdown
+## メモ・Markdown（WSL + Windows IME 向け）
+
+**方針:** OS の IME で日本語を書く。`#` `*` `-` は **打たない** → `Space m…` で入れる。
+（nvim 内 SKK は使わない。WSL では OS IME が本体。）
+
+執筆時は生の Markdown。保存時 prettier は走らない（`Space cf` で手動）。
+
+### 構造・装飾（Normal / Visual）— IME のまま Esc してから
 
 | キー | 動作 |
 |------|------|
+| `Space m1`〜`m4` | 見出し `#`〜`####`（もう一度で解除） |
+| `Space ml` | `- ` リスト |
+| `Space mo` | `1. ` 番号リスト |
+| `Space mk` | `- [ ] ` チェック |
+| `Space mq` | `> ` 引用 |
+| `Space mc` | コードブロック |
+| `Space mb` | **太字**（選択 or 単語） |
+| `Space mi` | *斜体* |
+| `Space m`` | `インラインコード` |
+| `Space ms` | ~~打ち消し~~ |
+| `Space mL` | `[text](url)` リンク |
 | `Ctrl-p` / `Space mp` | ブラウザプレビュー |
-| `Space mr` | エディタ内レンダー切替 |
-| `Space tz` | Zen モード（集中執筆） |
-| `Space uw` | wrap 切替 |
-| `Space us` | スペルチェック切替 |
+| `Space mr` | エディタ内レンダー |
+| `Space cf` | prettier 手動 |
+| `Space tz` | Zen モード |
+
+### スニペット（Insert・Tab 展開）
+
+| 入力 | 結果 |
+|------|------|
+| `h1` / `み1` | `# ` |
+| `h2` / `み2` | `## ` |
+| `li` / `りすと` | `- ` |
+| `b` | `**…**` |
+| `link` | `[表示](url)` |
+
+### 全角 → 半角（Insert 中の iabbrev）
+
+`＃`→`#`　`＊`→`*`　`｀`→`` ` ``
+
+### 型の例
+
+1. `Esc`（Normal）→ `Space m1` → 見出し記号が入る
+2. `i` → Windows IME で本文を日本語入力
+3. リストは `Esc` → `Space ml` → また `i` で本文
+4. 太字にしたい単語を Visual 選択 → `Space mb`
 
 ## ウィンドウ・バッファ・ターミナル
 

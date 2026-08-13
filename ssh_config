@@ -1,4 +1,4 @@
-# ~/.ssh/config に配置される（秘密鍵はリポジトリに含めない）
+# ~/.ssh/config.d/00-env.conf に配置される（秘密鍵は含めない）
 #
 # GitHub の認証は gh（HTTPS）に統一。
 # ここは LAN / クラウド等「サーバ接続用」の定義。
@@ -14,3 +14,13 @@ Match host *.maruchan.dev,*.v4v6.net,*.sh3.uk
   IdentityFile ~/.ssh/oci.key
   IdentityFile ~/.ssh/gcp.key
   IdentitiesOnly yes
+
+# --- 全OS共通の安全なデフォルト ---
+# Wi-Fi 切断・スリープ・WSL 停止など、TCP が半端に残った接続を検出する。
+# Host 固有値は ~/.ssh/config 側に先に書けば上書きできる。
+Host *
+  ServerAliveInterval 15
+  ServerAliveCountMax 3
+  TCPKeepAlive yes
+  ConnectTimeout 10
+  ConnectionAttempts 2

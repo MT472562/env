@@ -1,10 +1,12 @@
 # AtCoder environment (host side)
 export ATCODER_ENV="${ATCODER_ENV:-$HOME/atcoder-env}"
 
-# Prefer a real browser on native Linux (wslview is WSL-only)
+# OSに合うブラウザ起動コマンドを選ぶ（WSLは端末固有設定を優先）
 if [ -z "${WSL_DISTRO_NAME:-}" ] && [ -z "${WSL_INTEROP:-}" ]; then
   if [ -z "${BROWSER:-}" ]; then
-    if command -v google-chrome >/dev/null 2>&1; then
+    if [ "$(uname -s)" = Darwin ] && command -v open >/dev/null 2>&1; then
+      export BROWSER=open
+    elif command -v google-chrome >/dev/null 2>&1; then
       export BROWSER=google-chrome
     elif command -v firefox >/dev/null 2>&1; then
       export BROWSER=firefox
