@@ -229,9 +229,22 @@ nvim/
 | `30-plugins.conf` | tpm |
 | `40-copy-paste-wayland.conf` | wl-clipboard（Wayland 時） |
 | `41-copy-paste-x11.conf` | xclip（X11 時） |
-| `42-copy-paste-macos.conf` | pbcopy / pbpaste（macOS） |
+| `42-copy-paste-macos.conf` | pbcopy（macOS） |
+| `43-copy-paste-wsl.conf` | win32yank（WSL 時、Neovim と共通） |
 
-`.tmux.conf` の `if-shell` がOSと `WAYLAND_DISPLAY` を見て自動選択する（`paste.sh` もランタイム検出）。
+`.tmux.conf` の `if-shell` がOS、WSL、`WAYLAND_DISPLAY` を見て `copy-command` を自動選択する。WSL で `win32yank.exe` が見つからない場合は Wayland / X11 の設定を使う。
+tmux はアプリがマウス入力を使う場合も、通常の左ドラッグをコピーに使う。ボタンを離すと同じ `copy-command` で OS クリップボードにコピーし、選択を解除する。
+Neovim などのアプリ内で、ドラッグによるカーソル移動や Visual 選択は使えなくなる。
+右クリック貼り付けも tmux が処理し、WSL の `win32yank.exe`、Wayland の `wl-paste`、X11 の `xclip`、macOS の `pbpaste` から読み取る。
+貼り付け時は改行を LF に揃え、tmux の改行変換を止める。Windows Terminal には `Ctrl+Shift+C` / `Ctrl+Shift+V` をコピー / 貼り付けとして割り当てる。通常のドラッグは tmux が指を離した時点でコピーするため、コピーのショートカットは不要。
+Neovim 内も通常のドラッグは tmux が画面上の文字をコピーする。編集対象の文字を正確にコピーするときは Neovim の Visual 選択と `y` を使う。右クリック貼り付けは tmux の設定が処理する。
+
+Windows Terminal の `settings.json` はこのリポジトリに含めない。既存の `keybindings` に次の2件を追加する。
+
+```json
+{ "id": "Terminal.CopyToClipboard", "keys": "ctrl+shift+c" },
+{ "id": "Terminal.PasteFromClipboard", "keys": "ctrl+shift+v" }
+```
 
 ### aerc
 

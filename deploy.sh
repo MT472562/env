@@ -60,8 +60,7 @@ rm -f "$HOME/.bashrc.d/"*.bak 2>/dev/null || true
 cp -v "$ROOT"/bashrc.d/*.sh "$HOME/.bashrc.d/"
 
 mkdir -p "$HOME/.tmux"
-cp -v "$ROOT"/tmux/*.conf "$ROOT"/tmux/paste.sh "$HOME/.tmux/"
-chmod +x "$HOME/.tmux/paste.sh"
+cp -v "$ROOT"/tmux/*.conf "$HOME/.tmux/"
 
 mkdir -p "$HOME/.config"
 [ -f "$ROOT/starship.toml" ] && copy_file "$ROOT/starship.toml" "$HOME/.config/starship.toml"
